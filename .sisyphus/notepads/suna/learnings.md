@@ -360,3 +360,68 @@ $ wasm2wat suna_dsp.wasm | grep "export"
 - ✅ dsp.aot file exists (440 bytes)
 - ✅ dsp.aot has valid WAMR AOT magic bytes
 - ✅ Compilation message: "Compile success, file dsp.aot was generated"
+
+## Task 0.5: C++ <-> WASM Integration PoC
+
+### WAMR Runtime Initialization
+- Memory pool size: 512KB (sufficient for minimal DSP)
+- Stack size: 8192 bytes
+- Heap size: 8192 bytes
+- Initialization time: <1ms
+
+### MoonBit WASM Toolchain Installation (aarch64)
+- **Critical Discovery**: MoonBit native toolchain does NOT support aarch64 Linux
+- **Solution**: Use WASM-based MoonBit toolchain via Node.js
+- **Installation**: `curl -fsSL https://raw.githubusercontent.com/moonbitlang/moonbit-compiler/refs/heads/main/install.ts | node`
+- **Dependencies**: Node.js 24+, Rust toolchain (for building `moon` build system)
+- **Build time**: ~2 minutes for moon build system
+
+### MoonBit State Management
+- **Syntax Change**: MoonBit no longer supports `let mut` for global mutable variables
+- **Correct Approach**: Use `Ref[T]` type for mutable state
+  ```moonbit
+  let counter : Ref[Int] = { val: 0 }
+  
+  pub fn increment() -> Int {
+    counter.val = counter.val + 1
+    counter.val
+  }
+  ```
+- **State Location**: Ref values are stored in linear memory, persisting across function calls
+
+### Function Call Results
+- `multiply(2.0, 3.0)` = 6.0 ✅
+- `add(1.0, 2.0)` = 3.0 ✅
+- Functions use f32 (Float) type in MoonBit, mapped to WASM f32
+
+### State Persistence Verification (CRITICAL)
+- **Test**: Call `increment()` 3 times, then `get_counter()`
+- **Result**: `get_counter()` returns 3 ✅
+- **Conclusion**: MoonBit Ref[T] state persists correctly across WAMR function calls
+- **No GC interference**: State is maintained in linear memory, not subject to GC
+
+### WAMR API Usage
+- Use `wasm_runtime_call_wasm_a()` for typed arguments (wasm_val_t)
+- Function lookup: `wasm_runtime_lookup_function(module_inst, "function_name")`
+- Float arguments: `{ .kind = WASM_F32, .of = { .f32 = value } }`
+- Int results: `{ .kind = WASM_I32, .of = { .i32 = 0 } }`
+
+### Build Configuration
+- WAMR vmlib: `/workspace/libs/wamr/product-mini/platforms/linux/build/libiwasm.a`
+- AOT file: `/workspace/libs/wamr/wamr-compiler/build/dsp.aot` (4528 bytes)
+- WASM file: `/workspace/dsp/target/wasm/release/build/src/src.wasm` (1595 bytes)
+- Catch2 v3.5.2: Requires both .hpp and .cpp amalgamated files
+
+### Key Insights
+1. **MoonBit aarch64 Support**: Use WASM-based toolchain, not native binaries
+2. **State Management**: Ref[T] is the correct pattern for mutable global state
+3. **WAMR AOT**: Works correctly with MoonBit-generated WASM
+4. **State Persistence**: Confirmed - safe for audio DSP use case
+5. **Catch2 v3**: Requires compiling catch_amalgamated.cpp (not header-only)
+
+### Acceptance Criteria Met
+- ✅ `cmake --build tests/cpp/build` → success
+- ✅ `./wasm_poc_test` → `multiply(2.0, 3.0) = 6.0`
+- ✅ **State persistence test**: `increment()` x3 → `get_counter()` = 3
+- ✅ Catch2 test → ALL PASSED (29 assertions in 4 test cases)
+
