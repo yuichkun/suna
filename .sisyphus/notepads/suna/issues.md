@@ -75,3 +75,38 @@ Despite the blockers, the following was verified:
 ### Conclusion
 
 All implementation tasks are complete. The remaining unchecked items are explicitly marked as "Host Mac verification" items that require physical hardware testing outside the Docker environment.
+
+## Issue: Cubase doesn't recognize Suna.vst3 on Host Mac
+
+### Root Cause
+Docker environment builds for Linux aarch64, but Host Mac requires native macOS build:
+- Docker build: `Contents/aarch64-linux/Suna.so` (Linux ARM64)
+- Mac expects: `Contents/x86_64-apple/Suna.vst3` (Intel) or `Contents/arm64-apple/Suna.vst3` (Apple Silicon)
+
+### Solution
+Build directly on Host Mac instead of copying from Docker:
+
+```bash
+# On Host Mac
+cd /path/to/suna
+mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake --build . --config Release -j$(sysctl -n hw.ncpu)
+
+# VST3 will be at:
+# build/plugin/Suna_artefacts/Release/VST3/Suna.vst3
+```
+
+### Dependencies on macOS
+Ensure these are installed:
+```bash
+brew install cmake pkg-config
+# JUCE dependencies are typically already present on macOS
+```
+
+### Verification
+After building on Mac:
+```bash
+ls -la build/plugin/Suna_artefacts/Release/VST3/Suna.vst3/Contents/
+# Should show x86_64-apple/ or arm64-apple/ directory
+```

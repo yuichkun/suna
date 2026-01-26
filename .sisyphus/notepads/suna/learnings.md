@@ -827,3 +827,156 @@ cd ui && npm run test -- --run
 
 ### Conclusion
 All binaries are correctly built and contain expected content. The 8 remaining unchecked items in the plan are explicitly marked as "NOT tasks in the plan" (line 990) - they are user manual verification items requiring Host Mac hardware.
+
+## README Reference Analysis (kodama-vst)
+
+### Source
+- Repository: https://github.com/yuichkun/kodama-vst
+- Fetched: 2026-01-26
+
+### Structure Overview
+The kodama README follows a clear, developer-friendly structure:
+
+1. **Header Section**
+   - Project name (H1)
+   - Centered screenshot image
+   - One-line description
+
+2. **Features** (bullet list)
+   - Plugin parameters with ranges
+   - UI features
+   - Tech highlights
+
+3. **Architecture** (ASCII diagram)
+   - Visual representation of component relationships
+   - Shows shared UI, dual runtimes, shared DSP core
+   - Uses box-drawing characters for clarity
+
+4. **Directory Descriptions** (bullet list)
+   - Brief explanation of each top-level directory
+   - Explains native vs web compilation paths
+
+5. **Prerequisites** (table format)
+   - Platform-specific requirements
+   - Code block for additional setup commands
+
+6. **Quick Start**
+   - Clone instructions (with submodule note)
+   - Web Development commands
+   - JUCE Development commands
+
+7. **npm Scripts** (table format)
+   - Script name | Description
+   - Covers setup, dev, and release workflows
+
+8. **Project Structure** (tree format)
+   - Full directory tree with comments
+   - Shows key files in each directory
+
+9. **Build Artifacts** (table format)
+   - Target | Location
+   - Shows where to find built outputs
+
+10. **Tech Stack** (bullet list)
+    - DSP, Audio Plugin, UI, Build, Web Audio technologies
+
+11. **License**
+    - Single line
+
+### Key Style Elements
+- Tables for structured data (prerequisites, scripts, artifacts)
+- ASCII art for architecture visualization
+- Code blocks for commands
+- Centered image at top
+- Concise descriptions (1-2 sentences per item)
+- Clear separation between web and native workflows
+
+### Sections to Adapt for suna
+For suna, we need to add/modify:
+1. **Docker vs Host Mac** - kodama doesn't have this distinction
+2. **MoonBit specifics** - different from Rust DSP
+3. **WAMR AOT** - suna uses WAMR for both web and native (kodama uses native Rust for JUCE)
+4. **aarch64 considerations** - Docker environment specifics
+5. **Common Issues** - troubleshooting section (not in kodama)
+
+### Architecture Diagram Adaptation
+kodama:
+```
+Shared UI (Vue 3)
+       │
+   ┌───┴───┐
+   │       │
+Native   Web
+(JUCE)  (WASM)
+   │       │
+   └───┬───┘
+       │
+  Rust DSP Core
+```
+
+suna (different - single WASM for both):
+```
+Shared UI (Vue 3)
+       │
+   ┌───┴───┐
+   │       │
+Native   Web
+(JUCE)  (Browser)
+   │       │
+   └───┬───┘
+       │
+  WASM DSP (MoonBit)
+       │
+   ┌───┴───┐
+   │       │
+  AOT    WASM
+(WAMR)  (Web)
+```
+
+### npm Scripts Comparison
+| kodama | suna equivalent | Notes |
+|--------|-----------------|-------|
+| setup:web | setup:web | Same |
+| setup:juce | setup:juce | suna needs WASM build first |
+| dev:web | dev:web | Same |
+| dev:juce | dev:juce | Same |
+| build:dsp | build:dsp | MoonBit vs Rust |
+| release:web | release:web | Same |
+| release:vst | release:vst | Same |
+
+### Key Differences to Document
+1. **DSP Language**: MoonBit (suna) vs Rust (kodama)
+2. **Native Runtime**: WAMR AOT (suna) vs Rust FFI (kodama)
+3. **Build Environment**: Docker aarch64 (suna) vs native (kodama)
+4. **Memory Model**: WASM linear memory for both (suna) vs native + WASM (kodama)
+
+## README.md Created (2026-01-26)
+
+Created comprehensive README.md at `/workspace/README.md` following kodama-vst structure:
+
+### Sections Included
+1. **Header** - Project name, centered screenshot placeholder, one-line description
+2. **Features** - Delay parameters (Time, Feedback, Mix), dual runtime, shared UI
+3. **Architecture** - ASCII diagram showing WASM-based approach with WAMR AOT for native
+4. **Directory Overview** - Brief explanation of each top-level directory
+5. **Prerequisites** - Table format comparing Docker vs Host Mac requirements
+6. **Development Workflows** - Two distinct sections:
+   - Docker (Linux aarch64) for development/testing
+   - Host Mac for final plugin builds (critical for DAW compatibility)
+7. **npm Scripts** - Table with all 7 scripts and descriptions
+8. **Project Structure** - Full directory tree with key files annotated
+9. **Build Artifacts** - Table with target, location, and size
+10. **Tech Stack** - DSP, runtime, plugin framework, UI, testing
+11. **Troubleshooting** - 5 common issues with causes and solutions:
+    - Cubase/Logic doesn't recognize plugin (Docker vs Host Mac)
+    - MoonBit build fails
+    - WAMR AOT compilation fails
+    - Web version has no audio
+    - Tests fail with WASM not found
+
+### Key Adaptations from kodama
+- Added Docker vs Host Mac workflow distinction (suna-specific)
+- Changed architecture diagram to show single WASM for both native/web
+- Added troubleshooting section (not in kodama)
+- Documented WAMR AOT approach instead of Rust FFI
+- Included MoonBit-specific setup instructions
