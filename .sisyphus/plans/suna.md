@@ -571,7 +571,7 @@ Phase 4: UI Integration
 
 ---
 
-- [ ] 1.3. WASM AOT再ビルド (DSP完全版)
+- [x] 1.3. WASM AOT再ビルド (DSP完全版)
 
   **What to do**:
   - `npm run build:dsp` 実行 (0.2で作成したスクリプト)
