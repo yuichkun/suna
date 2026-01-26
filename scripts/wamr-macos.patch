@@ -2,7 +2,16 @@ diff --git a/wamr-compiler/CMakeLists.txt b/wamr-compiler/CMakeLists.txt
 index 1234567..abcdefg 100644
 --- a/wamr-compiler/CMakeLists.txt
 +++ b/wamr-compiler/CMakeLists.txt
-@@ -401,7 +401,11 @@ if (NOT MSVC)
+@@ -395,13 +395,23 @@ if (NOT MSVC)
+   target_link_libraries (wamrc aotclib vmlib ${lib_lldb} ${WAMRC_LINK_LLVM_LIBS} ${lib_ubsan}
+                          -lm -lpthread ${lib_pin_tool})
+ 
++  # On macOS, filter out -lrt from LLVM libraries (it doesn't exist on macOS)
++  if (APPLE)
++      string(REPLACE "-lrt" "" WAMRC_LINK_LLVM_LIBS "${WAMRC_LINK_LLVM_LIBS}")
++      string(REPLACE "-lrt" "" LLVM_AVAILABLE_LIBS "${LLVM_AVAILABLE_LIBS}")
++  endif()
++
    if (MINGW)
        target_link_libraries (wamrc ssp.a ws2_32)
    else()
@@ -15,3 +24,4 @@ index 1234567..abcdefg 100644
    endif()
  else()
    target_link_libraries (wamrc aotclib vmlib  ${lib_lldb} ${WAMRC_LINK_LLVM_LIBS} ${lib_ubsan}
+ 

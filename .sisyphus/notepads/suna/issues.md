@@ -144,3 +144,27 @@ bash scripts/apply-wamr-patch.sh
 ```
 
 The script is idempotent - it checks if the patch is already applied.
+
+## WAMR macOS `-lrt` Library Issue (2026-01-26)
+
+### Problem
+Building WAMR's wamrc compiler on macOS fails with `ld: library 'rt' not found`.
+
+### Root Cause
+The `-lrt` library (POSIX realtime extensions) doesn't exist on macOS - it's Linux-specific. The issue has two sources:
+1. Explicit `-lrt` in `target_link_libraries` calls
+2. **Hidden**: `-lrt` embedded in `${WAMRC_LINK_LLVM_LIBS}` from LLVM's build configuration
+
+### Solution
+Updated `/workspace/scripts/wamr-macos.patch` to:
+1. Filter `-lrt` from LLVM library variables using `string(REPLACE)`:
+   ```cmake
+   if (APPLE)
+       string(REPLACE "-lrt" "" WAMRC_LINK_LLVM_LIBS "${WAMRC_LINK_LLVM_LIBS}")
+       string(REPLACE "-lrt" "" LLVM_AVAILABLE_LIBS "${LLVM_AVAILABLE_LIBS}")
+   endif()
+   ```
+2. Conditionally link `-ldl -lrt` only on non-Apple platforms
+
+### Key Insight
+LLVM's CMake configuration can include `-lrt` in its exported library lists. Simply removing explicit `-lrt` from WAMR's CMakeLists.txt isn't enough - must also filter the LLVM variables.
