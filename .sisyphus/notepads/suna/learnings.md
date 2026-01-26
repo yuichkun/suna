@@ -702,3 +702,20 @@ Additional exports:
 - Dual mode (web/juce) achieved via environment variable switching
 - vue-tsc ^2.0.0 required for Vue 3.4+ compatibility
 
+
+## Task 3.2: AudioWorklet DSP Integration
+
+### Key Patterns
+- AudioWorklet receives WASM module via postMessage (not direct fetch)
+- WebRuntime.ts loads WASM, compiles, sends to worklet
+- processor.js uses WebAssembly.instantiate() with pre-compiled module
+- BUFFER_START = 900000 must match C++ WasmDSP constant
+
+### Architecture
+- WebRuntime: Main thread - loads WASM, manages AudioContext
+- SunaProcessor: Audio thread - processes samples via WASM
+- Communication: postMessage for init and param updates
+
+### Memory Layout
+- 128 samples * 4 bytes = 512 bytes per channel
+- leftIn, rightIn, leftOut, rightOut at consecutive offsets from BUFFER_START
