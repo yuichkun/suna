@@ -601,7 +601,7 @@ Phase 4: UI Integration
 
 ---
 
-- [ ] 1.4. C++ DSPラッパークラス作成
+- [x] 1.4. C++ DSPラッパークラス作成
 
   **What to do**:
   - `plugin/include/suna/WasmDSP.h`:
