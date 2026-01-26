@@ -12,12 +12,21 @@ juce_add_binary_data(SunaBinaryData
         "${CMAKE_CURRENT_SOURCE_DIR}/resources/suna_dsp.aot"
 )
 
+# Add UI BinaryData (for embedded Vue UI)
+juce_add_binary_data(SunaUIBinaryData
+    HEADER_NAME "UIBinaryData.h"
+    NAMESPACE SunaUI
+    SOURCES
+        "${CMAKE_SOURCE_DIR}/ui/dist/index.html"
+)
+
 # Add the plugin
 juce_add_plugin(Suna
     COMPANY_NAME "SunaAudio"
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT FALSE
+    NEEDS_WEB_BROWSER TRUE
     PLUGIN_MANUFACTURER_CODE Suna
     PLUGIN_CODE Suna
     FORMATS AU VST3 Standalone
@@ -47,6 +56,7 @@ target_include_directories(Suna
 target_link_libraries(Suna
     PRIVATE
         SunaBinaryData
+        SunaUIBinaryData
         ${WAMR_BUILD_DIR}/libiwasm.a
         juce::juce_audio_utils
         juce::juce_gui_extra
@@ -62,7 +72,7 @@ target_link_libraries(Suna
 # Compile definitions
 target_compile_definitions(Suna
     PUBLIC
-        JUCE_WEB_BROWSER=0
+        JUCE_WEB_BROWSER=1
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
 )
