@@ -22,10 +22,10 @@ echo ""
 # Helper functions
 check_command() {
     if ! command -v "$1" &> /dev/null; then
-        echo -e "${RED}✗ $1 not found${NC}"
+        echo -e "${RED}x $1 not found${NC}"
         return 1
     else
-        echo -e "${GREEN}✓ $1 found${NC}"
+        echo -e "${GREEN}ok $1${NC}"
         return 0
     fi
 }
@@ -36,7 +36,7 @@ step() {
     echo "----------------------------------------"
 }
 
-TOTAL_STEPS=6
+TOTAL_STEPS=5
 
 # Step 1: Check prerequisites
 step 1 "Checking prerequisites"
@@ -48,8 +48,13 @@ if ! check_command cmake; then
     MISSING_DEPS=1
 fi
 
-if ! check_command pkg-config; then
-    echo "  Install with: brew install pkg-config"
+if ! check_command ninja; then
+    echo "  Install with: brew install ninja"
+    MISSING_DEPS=1
+fi
+
+if ! check_command ccache; then
+    echo "  Install with: brew install ccache"
     MISSING_DEPS=1
 fi
 
@@ -65,6 +70,7 @@ fi
 
 if [ $MISSING_DEPS -eq 1 ]; then
     echo ""
+    echo -e "${YELLOW}Quick fix: brew install cmake ninja ccache node${NC}"
     echo -e "${RED}Error: Missing prerequisites. Please install them and run again.${NC}"
     exit 1
 fi
@@ -79,64 +85,49 @@ cd "$PROJECT_ROOT"
 if [ ! -d "libs/wamr/wamr-compiler" ] || [ ! -d "libs/JUCE" ]; then
     echo "Initializing git submodules..."
     git submodule update --init --recursive
-    echo -e "${GREEN}✓ Submodules initialized${NC}"
+    echo -e "${GREEN}ok Submodules initialized${NC}"
 else
-    echo -e "${GREEN}✓ Submodules already present${NC}"
+    echo -e "${GREEN}ok Submodules already present${NC}"
 fi
 
 # Step 3: Build LLVM (for wamrc)
 step 3 "Building LLVM for wamrc (~30 minutes)"
 
 WAMR_COMPILER_DIR="$PROJECT_ROOT/libs/wamr/wamr-compiler"
-LLVM_DIR="$WAMR_COMPILER_DIR/build/llvm"
+LLVM_BUILD_DIR="$PROJECT_ROOT/libs/wamr/core/deps/llvm/build"
 
-if [ -d "$LLVM_DIR" ] && [ -f "$LLVM_DIR/lib/libLLVMCore.a" ]; then
-    echo -e "${GREEN}✓ LLVM already built, skipping${NC}"
+if [ -f "$LLVM_BUILD_DIR/lib/libLLVMCore.a" ]; then
+    echo -e "${GREEN}ok LLVM already built, skipping${NC}"
 else
     echo -e "${YELLOW}Building LLVM... This takes ~30 minutes.${NC}"
-    echo "You can monitor progress in another terminal."
     cd "$WAMR_COMPILER_DIR"
     ./build_llvm.sh
-    echo -e "${GREEN}✓ LLVM build complete${NC}"
+    echo -e "${GREEN}ok LLVM build complete${NC}"
 fi
 
-# Step 4: Apply macOS patch
-step 4 "Applying macOS compatibility patch"
-
-cd "$PROJECT_ROOT"
-bash scripts/apply-wamr-patch.sh
-echo -e "${GREEN}✓ Patch applied (or already applied)${NC}"
-
-# Step 5: Build wamrc
-step 5 "Building wamrc compiler"
+# Step 4: Build wamrc
+step 4 "Building wamrc compiler"
 
 WAMRC_BUILD_DIR="$WAMR_COMPILER_DIR/build"
 WAMRC_BIN="$WAMRC_BUILD_DIR/wamrc"
 
 if [ -f "$WAMRC_BIN" ]; then
-    echo -e "${GREEN}✓ wamrc already built at $WAMRC_BIN${NC}"
+    echo -e "${GREEN}ok wamrc already built${NC}"
 else
     echo "Building wamrc..."
     mkdir -p "$WAMRC_BUILD_DIR"
     cd "$WAMRC_BUILD_DIR"
-    cmake ..
+    cmake .. -DWAMR_BUILD_PLATFORM=darwin
     make -j$(sysctl -n hw.ncpu)
-    echo -e "${GREEN}✓ wamrc built successfully${NC}"
+    echo -e "${GREEN}ok wamrc built successfully${NC}"
 fi
 
-# Verify wamrc works
-if "$WAMRC_BIN" --version &> /dev/null; then
-    echo -e "${GREEN}✓ wamrc is functional${NC}"
-else
-    echo -e "${YELLOW}Warning: wamrc built but version check failed${NC}"
-fi
-
-# Step 6: npm setup
-step 6 "Running npm setup:juce"
+# Step 5: npm setup
+step 5 "Running npm setup:juce"
 
 cd "$PROJECT_ROOT"
 npm run setup:juce
-echo -e "${GREEN}✓ npm setup complete${NC}"
+echo -e "${GREEN}ok npm setup complete${NC}"
 
 # Done!
 echo ""
