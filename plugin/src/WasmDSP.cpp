@@ -275,6 +275,10 @@ void WasmDSP::setMix(float value) {
 }
 
 void WasmDSP::shutdown() {
+    // Clear flags FIRST to prevent audio thread from accessing resources during destruction
+    const bool wasInitialized = initialized_.exchange(false);
+    prepared_.store(false);
+
     if (execEnv_) {
         wasm_runtime_destroy_exec_env(execEnv_);
         execEnv_ = nullptr;
@@ -290,7 +294,7 @@ void WasmDSP::shutdown() {
         module_ = nullptr;
     }
 
-    if (initialized_) {
+    if (wasInitialized) {
         wasm_runtime_destroy();
     }
 
@@ -309,8 +313,6 @@ void WasmDSP::shutdown() {
     nativeLeftIn_ = nativeRightIn_ = nativeLeftOut_ = nativeRightOut_ = nullptr;
     maxBlockSize_ = 0;
     aotDataSize_ = 0;
-    initialized_ = false;
-    prepared_ = false;
 }
 
 } // namespace suna
