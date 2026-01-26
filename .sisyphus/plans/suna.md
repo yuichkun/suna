@@ -426,7 +426,7 @@ Phase 4: UI Integration
 
 ---
 
-- [ ] 0.5. C++ ↔ WASM統合PoC (状態永続性検証含む)
+- [x] 0.5. C++ ↔ WASM統合PoC (状態永続性検証含む)
 
   **What to do**:
   - MoonBit側に状態保持テスト関数追加 (`dsp/src/lib.mbt`):
