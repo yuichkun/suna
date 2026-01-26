@@ -321,7 +321,7 @@ Phase 4: UI Integration
 
 ---
 
-- [ ] 0.3. MoonBit最小WASMビルド検証
+- [x] 0.3. MoonBit最小WASMビルド検証
 
   **What to do**:
   - `dsp/moon.mod.json` 作成
