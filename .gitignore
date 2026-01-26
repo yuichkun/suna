@@ -1,6 +1,6 @@
 # MoonBit build artifacts
 dsp/_build/
-dsp/target/
+dsp/target
 
 # Node.js
 node_modules/
