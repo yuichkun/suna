@@ -651,7 +651,7 @@ Phase 4: UI Integration
 
 ### Phase 2: JUCE Plugin
 
-- [ ] 2.1. JUCE プラグイン基本構造
+- [x] 2.1. JUCE プラグイン基本構造
 
   **What to do**:
   - `plugin/CMakeLists.txt` 設定:
