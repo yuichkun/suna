@@ -1,0 +1,11 @@
+{
+  "name": "suna-ui",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:web": "echo 'Vite dev server will be configured in Task 0.4'",
+    "dev:juce": "echo 'JUCE dev mode will be configured in Task 0.4'",
+    "build:web": "echo 'Web build will be configured in Task 0.4'",
+    "build": "echo 'JUCE build will be configured in Task 0.4'"
+  }
+}

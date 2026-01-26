@@ -1,0 +1,14 @@
+{
+  "name": "suna",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "setup:web": "cd ui && npm install",
+    "setup:juce": "npm run build:dsp && cd ui && npm install",
+    "dev:web": "cd ui && npm run dev:web",
+    "dev:juce": "cd ui && npm run dev:juce",
+    "build:dsp": "bash scripts/build-dsp.sh",
+    "release:web": "npm run build:dsp && cd ui && npm run build:web",
+    "release:vst": "npm run build:dsp && cmake -B build -S plugin && cmake --build build --config Release"
+  }
+}

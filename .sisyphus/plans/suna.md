@@ -191,7 +191,7 @@ Phase 4: UI Integration
 
 ---
 
-- [ ] 0.2. プロジェクト構造作成
+- [x] 0.2. プロジェクト構造作成
 
   **What to do**:
   - `/workspace/` 直下にディレクトリ構造作成:
