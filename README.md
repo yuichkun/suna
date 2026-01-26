@@ -97,6 +97,16 @@ npm run release:vst   # Build VST3/AU (Linux)
 # Setup (first time)
 brew install cmake pkg-config
 git submodule update --init --recursive
+
+# Build WAMR compiler (wamrc) for macOS
+# Required because wamrc must be native to the host OS
+cd libs/wamr/wamr-compiler
+./build_llvm.sh  # Takes ~30 minutes, builds LLVM
+mkdir -p build && cd build
+cmake ..
+make -j$(sysctl -n hw.ncpu)
+cd ../../../..
+
 npm run setup:juce
 
 # Build for macOS
