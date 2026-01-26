@@ -784,7 +784,7 @@ Phase 4: UI Integration
 
 ### Phase 3: Web Version
 
-- [ ] 3.1. Web プロジェクト構造作成
+- [x] 3.1. Web プロジェクト構造作成
 
   **What to do**:
   - `ui/package.json` (Vue 3 + Vite + Vitest) with scripts:
