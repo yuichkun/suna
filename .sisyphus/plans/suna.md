@@ -29,6 +29,20 @@ kodama-vst (https://github.com/yuichkun/kodama-vst) の構成を参考に、Rust
 - 単一tap Delayから開始 → スコープを明確化
 - MoonBit状態管理 → PoC(0.5)で状態永続性を明示的に検証
 
+### Git作業ルール (CRITICAL)
+**理由がない限りgitの差分が残っている状態で次のstepに進まない**
+
+各タスク完了後、必ず以下を確認：
+1. `git status` → working tree clean
+2. ビルド成果物は `.gitignore` に追加済み
+3. notepad更新はコミット済み
+4. プランファイル更新 (`[x]`) はコミット済み
+
+差分が残っている場合：
+- ビルド成果物 → `.gitignore` に追加してコミット
+- ソースコード変更 → コミット
+- 一時ファイル → 削除またはignore
+
 ---
 
 ## Work Objectives
