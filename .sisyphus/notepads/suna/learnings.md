@@ -602,3 +602,33 @@ Additional exports:
 - MoonBit FixedArray globals consume WASM linear memory at module load
 - Stereo processing bug: MoonBit process_sample called twice per sample advances write_pos twice, halving effective delay
 - AOT data must remain valid for module lifetime (copy and store)
+
+## Task 2.1: JUCE Plugin Basic Structure
+
+### CMake Configuration
+- Used `juce_add_plugin()` with FORMATS AU VST3 Standalone
+- `juce_generate_juce_header(Suna)` required for `<JuceHeader.h>` include
+- `juce_add_binary_data()` embeds AOT file as `SunaBinaryData::suna_dsp_aot`
+- WAMR linked via `libiwasm.a` (not `libvmlib.a`)
+- Required system libs: pthread, m, dl
+
+### Linux Dependencies
+- pkg-config, libasound2-dev, libfreetype6-dev, libfontconfig1-dev
+- libgl1-mesa-dev, libx11-dev, libxrandr-dev, libxinerama-dev
+- libxcursor-dev, libxext-dev
+
+### PluginProcessor Integration
+- WasmDSP initialized in constructor from BinaryData
+- `prepareToPlay()` calls `wasmDSP_.prepareToPlay(sampleRate, samplesPerBlock)`
+- `processBlock()` extracts stereo channels, calls WasmDSP, writes back in-place
+- Added `using juce::AudioProcessor::processBlock;` to fix hidden virtual warning
+
+### Build Results
+- Standalone: 95MB (Debug, with debug_info)
+- VST3: 87MB (Debug, with debug_info)
+- Build time: ~30s on aarch64
+
+### Key Insights
+- JUCE 8.0.12 uses `juce_audio_processors_headless` module
+- Standalone runs but needs ALSA/X11 for full functionality
+- VST3 bundle structure: Suna.vst3/Contents/aarch64-linux/Suna.so
