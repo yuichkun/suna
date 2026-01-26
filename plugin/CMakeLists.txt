@@ -2,7 +2,11 @@
 
 # WAMR paths
 set(WAMR_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../libs/wamr)
-set(WAMR_BUILD_DIR ${WAMR_ROOT}/product-mini/platforms/linux/build)
+if(APPLE)
+    set(WAMR_BUILD_DIR ${WAMR_ROOT}/product-mini/platforms/darwin/build)
+else()
+    set(WAMR_BUILD_DIR ${WAMR_ROOT}/product-mini/platforms/linux/build)
+endif()
 
 # Add binary data for AOT file
 juce_add_binary_data(SunaBinaryData
@@ -31,7 +35,7 @@ juce_add_plugin(Suna
     PLUGIN_CODE Suna
     FORMATS AU VST3 Standalone
     PRODUCT_NAME "Suna"
-    COPY_PLUGIN_AFTER_BUILD FALSE
+    COPY_PLUGIN_AFTER_BUILD TRUE
 )
 
 # Generate JuceHeader.h

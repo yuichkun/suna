@@ -7,8 +7,6 @@
 SunaAudioProcessorEditor::SunaAudioProcessorEditor(SunaAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p)
 {
-    setSize(400, 350);
-    
     delayTimeRelay = std::make_unique<juce::WebSliderRelay>("delayTime");
     feedbackRelay = std::make_unique<juce::WebSliderRelay>("feedback");
     mixRelay = std::make_unique<juce::WebSliderRelay>("mix");
@@ -44,6 +42,8 @@ SunaAudioProcessorEditor::SunaAudioProcessorEditor(SunaAudioProcessor& p)
 #else
     browser->goToURL(juce::WebBrowserComponent::getResourceProviderRoot());
 #endif
+    
+    setSize(400, 350);
 }
 
 SunaAudioProcessorEditor::~SunaAudioProcessorEditor() = default;

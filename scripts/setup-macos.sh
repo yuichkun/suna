@@ -36,7 +36,7 @@ step() {
     echo "----------------------------------------"
 }
 
-TOTAL_STEPS=5
+TOTAL_STEPS=6
 
 # Step 1: Check prerequisites
 step 1 "Checking prerequisites"
@@ -122,8 +122,25 @@ else
     echo -e "${GREEN}ok wamrc built successfully${NC}"
 fi
 
-# Step 5: npm setup
-step 5 "Running npm setup:juce"
+# Step 5: Build libiwasm
+step 5 "Building libiwasm runtime"
+
+IWASM_BUILD_DIR="$PROJECT_ROOT/libs/wamr/product-mini/platforms/darwin/build"
+IWASM_LIB="$IWASM_BUILD_DIR/libiwasm.a"
+
+if [ -f "$IWASM_LIB" ]; then
+    echo -e "${GREEN}ok libiwasm already built${NC}"
+else
+    echo "Building libiwasm..."
+    mkdir -p "$IWASM_BUILD_DIR"
+    cd "$IWASM_BUILD_DIR"
+    cmake ..
+    make -j$(sysctl -n hw.ncpu)
+    echo -e "${GREEN}ok libiwasm built successfully${NC}"
+fi
+
+# Step 6: npm setup
+step 6 "Running npm setup:juce"
 
 cd "$PROJECT_ROOT"
 npm run setup:juce

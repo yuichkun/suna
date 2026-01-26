@@ -49,22 +49,14 @@ A delay effect VST3/AU plugin with MoonBit DSP compiled to WebAssembly, running 
 # Install dependencies
 brew install cmake ninja ccache node
 xcode-select --install
-
-# Install MoonBit
 curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
 
 # Setup (includes LLVM build, ~30 min first time)
 git submodule update --init --recursive
-bash scripts/setup-macos.sh
+npm run setup:macos
 
-# Build plugin
-npm run build:dsp
-mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release -j$(sysctl -n hw.ncpu)
-
-# Install
-cp -r plugin/Suna_artefacts/Release/VST3/Suna.vst3 ~/Library/Audio/Plug-Ins/VST3/
+# Build & install plugin
+npm run release:vst
 ```
 
 ## Development
@@ -111,21 +103,15 @@ suna/
 
 Build on macOS, not Docker:
 ```bash
-npm run build:dsp
-cd build && cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release -j$(sysctl -n hw.ncpu)
+npm run release:vst
 ```
 
 ### wamrc build fails
 
-Ensure LLVM is built for macOS:
+Re-run setup:
 ```bash
-cd libs/wamr/wamr-compiler
-rm -rf build ../core/deps/llvm
-./build_llvm.sh
-mkdir -p build && cd build
-cmake .. -DWAMR_BUILD_PLATFORM=darwin
-make -j$(sysctl -n hw.ncpu)
+rm -rf libs/wamr/core/deps/llvm libs/wamr/wamr-compiler/build
+npm run setup:macos
 ```
 
 ## License

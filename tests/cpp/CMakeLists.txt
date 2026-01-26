@@ -1,6 +1,10 @@
 set(WORKSPACE_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 set(WAMR_ROOT ${WORKSPACE_ROOT}/libs/wamr)
-set(WAMR_BUILD_DIR ${WAMR_ROOT}/product-mini/platforms/linux/build)
+if(APPLE)
+    set(WAMR_BUILD_DIR ${WAMR_ROOT}/product-mini/platforms/darwin/build)
+else()
+    set(WAMR_BUILD_DIR ${WAMR_ROOT}/product-mini/platforms/linux/build)
+endif()
 set(PLUGIN_ROOT ${WORKSPACE_ROOT}/plugin)
 
 add_executable(wasm_poc_test
