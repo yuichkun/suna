@@ -141,7 +141,7 @@ Phase 4: UI Integration
 
 ### Phase 0: Environment & Proof of Concept
 
-- [ ] 0.1. Docker環境セットアップ
+- [x] 0.1. Docker環境セットアップ
 
   **What to do**:
   - 必要なパッケージをインストール:
