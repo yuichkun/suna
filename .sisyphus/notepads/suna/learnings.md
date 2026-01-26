@@ -477,3 +477,62 @@ $ wasm2wat suna_dsp.wasm | grep "export"
 - File size: 2597 bytes
 - Exports: memory, process_sample, set_mix, set_feedback, init_delay, set_delay_time, get_counter, increment, add, multiply, _start
 
+
+## Task 1.2: Stereo Buffer Processing
+
+### Linear Memory Access in MoonBit
+
+MoonBit provides inline WASM syntax for direct memory access:
+
+```moonbit
+/// Load a 32-bit float from linear memory at given byte offset
+extern "wasm" fn load_f32(ptr : Int) -> Float =
+  #|(func (param i32) (result f32) (f32.load (local.get 0)))
+
+/// Store a 32-bit float to linear memory at given byte offset
+extern "wasm" fn store_f32(ptr : Int, value : Float) =
+  #|(func (param i32 f32) (f32.store (local.get 0) (local.get 1)))
+```
+
+Key points:
+- Use `extern "wasm" fn` with inline WAT syntax
+- Pointers are byte offsets (4 bytes per Float32)
+- No `@wasm.memory_load_f32` intrinsics exist - use inline WASM
+
+### In-Place Processing
+
+The `process_block` function supports in-place processing where `in_ptr == out_ptr`:
+- Read input sample first
+- Process through delay
+- Write output to same location
+- Works because we read before write in each iteration
+
+### Function Signature
+
+```moonbit
+pub fn process_block(
+  state_ptr : Int,        // Reserved for future state management
+  left_in_ptr : Int,      // Pointer to left input buffer (byte offset)
+  right_in_ptr : Int,     // Pointer to right input buffer
+  left_out_ptr : Int,     // Pointer to left output buffer
+  right_out_ptr : Int,    // Pointer to right output buffer
+  num_samples : Int       // Number of samples to process
+) -> Int                  // 0 on success, non-zero on error
+```
+
+### WASM Export Verification
+
+After building with `moon build --target wasm`, verify export:
+```bash
+wasm2wat _build/wasm/release/build/src/src.wasm | grep "export.*process_block"
+```
+
+Expected type signature: `(func (param i32 i32 i32 i32 i32 i32) (result i32))`
+
+### Key Insights
+
+1. MoonBit's `extern "wasm"` allows embedding raw WAT instructions
+2. The inline WASM function body must be a complete function definition
+3. Parameters are accessed via `local.get N` where N is 0-indexed
+4. Memory operations use WASM's native `f32.load` and `f32.store`
+5. Build output location: `_build/wasm/release/build/src/src.wasm`
