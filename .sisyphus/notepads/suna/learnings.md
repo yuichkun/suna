@@ -811,3 +811,19 @@ cd dsp && moon test
 cd build/tests/cpp && ctest --output-on-failure
 cd ui && npm run test -- --run
 ```
+
+## Final Binary Verification (Docker Environment)
+
+### VST3 Plugin Verification
+- **GetPluginFactory symbol**: Exported ✅ (required VST3 entry point)
+- **Embedded UI**: HTML content found in binary ✅
+- **Parameter names**: "Delay Time", "Feedback", "Mix" embedded ✅
+- **Binary size**: 96MB (Debug build with symbols)
+
+### Standalone Verification
+- **Binary exists**: 105MB executable ✅
+- **Execution attempt**: Starts but fails due to missing ALSA/audio hardware
+- **JUCE version**: 8.0.12 confirmed in output
+
+### Conclusion
+All binaries are correctly built and contain expected content. The 8 remaining unchecked items in the plan are explicitly marked as "NOT tasks in the plan" (line 990) - they are user manual verification items requiring Host Mac hardware.
