@@ -719,3 +719,28 @@ Additional exports:
 ### Memory Layout
 - 128 samples * 4 bytes = 512 bytes per channel
 - leftIn, rightIn, leftOut, rightOut at consecutive offsets from BUFFER_START
+
+## Task 4.1: Vue UI Components - Learnings
+
+### Vue Component Patterns
+- Use `defineProps<T>()` with TypeScript generics for type-safe props
+- Use `defineEmits<T>()` for typed event emissions
+- `v-model` pattern: accept `modelValue` prop, emit `update:modelValue`
+- Computed properties for derived values (displayValue, normalizedValue)
+
+### Slider Implementation
+- Custom slider styling requires `-webkit-appearance: none` and `::-webkit-slider-thumb`
+- Visual fill track needs separate div with computed width percentage
+- Firefox needs `::-moz-range-thumb` and `::-moz-range-track` for cross-browser support
+
+### Runtime Integration
+- Check `(window as any).juce` for JUCE WebView detection
+- Initialize WebRuntime only in browser mode
+- Apply initial parameter values after runtime.initialize()
+- Clean up with runtime.destroy() in onUnmounted
+
+### Build Config Fixes
+- vite.config.ts needs `/// <reference types="vitest" />` for test config
+- @types/node required for process.env access
+- vite-plugin-singlefile conflicts with manualChunks - removed manualChunks
+
