@@ -2,7 +2,7 @@
   "is-main": true,
   "link": {
     "wasm": {
-      "exports": ["multiply", "add"],
+      "exports": ["multiply", "add", "increment", "get_counter"],
       "heap-start-address": 65536,
       "export-memory-name": "memory"
     }
