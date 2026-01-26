@@ -1,0 +1,5 @@
+
+# TypeScript build info
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
