@@ -3,7 +3,9 @@ import type { Runtime } from './types';
 export class WebRuntime implements Runtime {
   private audioContext: AudioContext | null = null;
   private workletNode: AudioWorkletNode | null = null;
-  private sourceNode: MediaStreamAudioSourceNode | null = null;
+  private sourceNode: AudioBufferSourceNode | null = null;
+  private audioBuffer: AudioBuffer | null = null;
+  private isPlaying = false;
 
   async initialize(): Promise<void> {
     this.audioContext = new AudioContext();
@@ -26,11 +28,45 @@ export class WebRuntime implements Runtime {
       };
     });
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    this.sourceNode = this.audioContext.createMediaStreamSource(stream);
-
-    this.sourceNode.connect(this.workletNode);
     this.workletNode.connect(this.audioContext.destination);
+  }
+
+  async loadAudioFile(file: File): Promise<void> {
+    if (!this.audioContext) throw new Error('Runtime not initialized');
+    const arrayBuffer = await file.arrayBuffer();
+    this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+  }
+
+  play(): void {
+    if (!this.audioContext || !this.audioBuffer || !this.workletNode) return;
+    this.stop();
+
+    this.sourceNode = this.audioContext.createBufferSource();
+    this.sourceNode.buffer = this.audioBuffer;
+    this.sourceNode.loop = true;
+    this.sourceNode.connect(this.workletNode);
+    this.sourceNode.start();
+    this.isPlaying = true;
+  }
+
+  stop(): void {
+    if (this.sourceNode) {
+      try {
+        this.sourceNode.stop();
+      } catch {
+      }
+      this.sourceNode.disconnect();
+      this.sourceNode = null;
+    }
+    this.isPlaying = false;
+  }
+
+  getIsPlaying(): boolean {
+    return this.isPlaying;
+  }
+
+  hasAudioLoaded(): boolean {
+    return this.audioBuffer !== null;
   }
 
   setDelayTime(ms: number): void {
@@ -46,8 +82,8 @@ export class WebRuntime implements Runtime {
   }
 
   destroy(): void {
+    this.stop();
     this.workletNode?.disconnect();
-    this.sourceNode?.disconnect();
     this.audioContext?.close();
   }
 }

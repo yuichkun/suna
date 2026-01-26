@@ -104,3 +104,34 @@ if (firstCall) {
 
 **Pattern Rule**: State flags → Resource destruction (never reverse order)
 
+---
+
+## Web Audio File Picker Implementation (2026-01-26)
+
+**Pattern**: AudioBufferSourceNode for file playback in Web Audio API.
+
+**Applied to Suna Web Mode**:
+- Added file picker UI (hidden input + button trigger)
+- Implemented `loadAudioFile()` using `AudioContext.decodeAudioData()`
+- Implemented `play()` with `AudioBufferSourceNode` and loop enabled
+- Implemented `stop()` with proper cleanup
+
+**Key Techniques**:
+- Hidden file input (`display: none`) triggered by button click
+- `file.arrayBuffer()` → `audioContext.decodeAudioData()` → `AudioBuffer`
+- Create new `AudioBufferSourceNode` on each play (they're one-shot)
+- Always call `stop()` before `play()` to clean up previous source
+- `.loop = true` for continuous playback
+
+**Audio Graph**:
+```
+AudioBufferSourceNode → AudioWorkletNode (suna-processor) → destination
+```
+
+**Files Modified**:
+- `/workspace/ui/src/runtime/types.ts` - Extended Runtime interface with optional methods
+- `/workspace/ui/src/runtime/WebRuntime.ts` - Added file playback methods
+- `/workspace/ui/src/App.vue` - Added file picker UI (web mode only)
+
+**Reference**: Kodama VST WebAudioControls.vue and WebRuntime.ts
+
