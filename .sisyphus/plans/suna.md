@@ -689,7 +689,7 @@ Phase 4: UI Integration
 
 ---
 
-- [ ] 2.2. AudioProcessorValueTreeState設定
+- [x] 2.2. AudioProcessorValueTreeState設定
 
   **What to do**:
   - パラメータ定義:
