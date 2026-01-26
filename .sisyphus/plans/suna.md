@@ -825,7 +825,7 @@ Phase 4: UI Integration
 
 ---
 
-- [ ] 3.2. AudioWorklet DSP統合
+- [x] 3.2. AudioWorklet DSP統合
 
   **What to do**:
   - WASM は `npm run build:dsp` で自動コピー済み (`ui/public/suna_dsp.wasm`)
