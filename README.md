@@ -102,6 +102,10 @@ git submodule update --init --recursive
 # Required because wamrc must be native to the host OS
 cd libs/wamr/wamr-compiler
 ./build_llvm.sh  # Takes ~30 minutes, builds LLVM
+
+# Apply macOS compatibility patch (removes -lrt which doesn't exist on macOS)
+bash scripts/apply-wamr-patch.sh
+
 mkdir -p build && cd build
 cmake ..
 make -j$(sysctl -n hw.ncpu)

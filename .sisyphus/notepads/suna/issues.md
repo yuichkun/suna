@@ -110,3 +110,37 @@ After building on Mac:
 ls -la build/plugin/Suna_artefacts/Release/VST3/Suna.vst3/Contents/
 # Should show x86_64-apple/ or arm64-apple/ directory
 ```
+
+## Issue: WAMR wamrc build fails on macOS with "library 'rt' not found"
+
+### Root Cause
+WAMR's `wamr-compiler/CMakeLists.txt` line 404 links `-lrt` (POSIX realtime extensions library).
+On Linux, `librt` is a separate library. On macOS, these functions are part of the system libraries - there is no separate `librt`.
+
+### Error Message
+```
+ld: library 'rt' not found
+clang: error: linker command failed with exit code 1
+```
+
+### Solution
+Created a patch file and apply script:
+- Patch: `scripts/wamr-macos.patch`
+- Script: `scripts/apply-wamr-patch.sh`
+
+The patch makes linking conditional:
+```cmake
+if (NOT APPLE)
+    target_link_libraries (wamrc -ldl -lrt)
+else()
+    target_link_libraries (wamrc -ldl)
+endif()
+```
+
+### Usage
+Before building wamrc on macOS:
+```bash
+bash scripts/apply-wamr-patch.sh
+```
+
+The script is idempotent - it checks if the patch is already applied.

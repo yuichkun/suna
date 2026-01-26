@@ -1,0 +1,17 @@
+diff --git a/wamr-compiler/CMakeLists.txt b/wamr-compiler/CMakeLists.txt
+index 1234567..abcdefg 100644
+--- a/wamr-compiler/CMakeLists.txt
++++ b/wamr-compiler/CMakeLists.txt
+@@ -401,7 +401,11 @@ if (NOT MSVC)
+   if (MINGW)
+       target_link_libraries (wamrc ssp.a ws2_32)
+   else()
+-      target_link_libraries (wamrc -ldl)
++      if (NOT APPLE)
++          target_link_libraries (wamrc -ldl -lrt)
++      else()
++          target_link_libraries (wamrc -ldl)
++      endif()
+   endif()
+ else()
+   target_link_libraries (wamrc aotclib vmlib  ${lib_lldb} ${WAMRC_LINK_LLVM_LIBS} ${lib_ubsan}
