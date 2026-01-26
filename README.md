@@ -94,7 +94,24 @@ npm run release:vst   # Build VST3/AU (Linux)
 **Important**: For plugins that work in macOS DAWs (Cubase, Logic, Ableton), you must build on Host Mac.
 
 ```bash
-# Setup (first time)
+# First-time setup (takes ~30-40 minutes)
+bash scripts/setup-macos.sh
+
+# Build for macOS
+npm run build:dsp
+mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake --build . --config Release -j$(sysctl -n hw.ncpu)
+
+# Install plugin
+cp -r plugin/Suna_artefacts/Release/VST3/Suna.vst3 ~/Library/Audio/Plug-Ins/VST3/
+```
+
+<details>
+<summary>Manual Setup (alternative to setup script)</summary>
+
+```bash
+# Prerequisites
 brew install cmake pkg-config
 git submodule update --init --recursive
 
@@ -112,16 +129,9 @@ make -j$(sysctl -n hw.ncpu)
 cd ../../../..
 
 npm run setup:juce
-
-# Build for macOS
-npm run build:dsp
-mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release -j$(sysctl -n hw.ncpu)
-
-# Install plugin
-cp -r plugin/Suna_artefacts/Release/VST3/Suna.vst3 ~/Library/Audio/Plug-Ins/VST3/
 ```
+
+</details>
 
 ## npm Scripts
 
