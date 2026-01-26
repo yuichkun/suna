@@ -11,7 +11,8 @@
         "set_delay_time",
         "set_feedback",
         "set_mix",
-        "process_sample"
+        "process_sample",
+        "process_block"
       ],
       "heap-start-address": 65536,
       "export-memory-name": "memory"
