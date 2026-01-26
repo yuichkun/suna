@@ -721,7 +721,7 @@ Phase 4: UI Integration
 
 ---
 
-- [ ] 2.3. processBlock実装
+- [x] 2.3. processBlock実装
 
   **What to do**:
   - `prepareToPlay()`:
