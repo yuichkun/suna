@@ -1,0 +1,10 @@
+{
+  "is-main": true,
+  "link": {
+    "wasm": {
+      "exports": ["multiply", "add"],
+      "heap-start-address": 65536,
+      "export-memory-name": "memory"
+    }
+  }
+}

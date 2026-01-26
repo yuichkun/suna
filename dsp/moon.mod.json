@@ -1,0 +1,5 @@
+{
+  "name": "yuichkun/suna-dsp",
+  "version": "0.1.0",
+  "description": "Minimal WASM DSP module for suna audio plugin"
+}
