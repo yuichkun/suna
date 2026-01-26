@@ -1,0 +1,87 @@
+// Single-tap delay effect implementation
+// Uses global state with FixedArray for GC-minimized design
+
+// グローバル状態 (モジュールレベル、linear memory内)
+// Max 2 seconds @ 48kHz = 96000 samples
+let delay_buffer : FixedArray[Float] = FixedArray::make(96000 * 2, 0.0)
+let write_pos : Ref[Int] = { val: 0 }
+let sample_rate : Ref[Float] = { val: 44100.0 }
+let delay_samples : Ref[Int] = { val: 0 }
+let feedback : Ref[Float] = { val: 0.3 }
+let mix : Ref[Float] = { val: 0.5 }
+
+/// Initialize delay processor
+/// Returns 0 on success
+pub fn init_delay(sr : Float, max_delay_ms : Float) -> Int {
+  sample_rate.val = sr
+  write_pos.val = 0
+  // Clear buffer
+  let buffer_size = delay_buffer.length()
+  for i = 0; i < buffer_size; i = i + 1 {
+    delay_buffer[i] = 0.0
+  }
+  // Set default delay time based on max_delay_ms (use 1/4 of max as default)
+  let default_ms = max_delay_ms / 4.0
+  set_delay_time(default_ms)
+  0 // success
+}
+
+/// Set delay time in milliseconds
+pub fn set_delay_time(ms : Float) -> Unit {
+  let samples = (ms * sample_rate.val / 1000.0).to_int()
+  let max_samples = delay_buffer.length()
+  delay_samples.val = if samples < 0 {
+    0
+  } else if samples > max_samples {
+    max_samples
+  } else {
+    samples
+  }
+}
+
+/// Set feedback amount (0.0-1.0)
+pub fn set_feedback(value : Float) -> Unit {
+  feedback.val = if value < 0.0 {
+    0.0
+  } else if value > 1.0 {
+    1.0
+  } else {
+    value
+  }
+}
+
+/// Set dry/wet mix (0.0-1.0)
+pub fn set_mix(value : Float) -> Unit {
+  mix.val = if value < 0.0 {
+    0.0
+  } else if value > 1.0 {
+    1.0
+  } else {
+    value
+  }
+}
+
+/// Process single sample through delay
+pub fn process_sample(input : Float) -> Float {
+  let buffer_size = delay_buffer.length()
+  
+  // Calculate read position (circular buffer)
+  let read_pos = if write_pos.val >= delay_samples.val {
+    write_pos.val - delay_samples.val
+  } else {
+    buffer_size - (delay_samples.val - write_pos.val)
+  }
+  
+  // Read delayed sample
+  let delayed = delay_buffer[read_pos]
+  
+  // Write input + feedback to buffer
+  let output = input + delayed * feedback.val
+  delay_buffer[write_pos.val] = output
+  
+  // Advance write position
+  write_pos.val = (write_pos.val + 1) % buffer_size
+  
+  // Mix dry/wet
+  input * (1.0 - mix.val) + delayed * mix.val
+}

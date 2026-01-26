@@ -425,3 +425,55 @@ $ wasm2wat suna_dsp.wasm | grep "export"
 - ✅ **State persistence test**: `increment()` x3 → `get_counter()` = 3
 - ✅ Catch2 test → ALL PASSED (29 assertions in 4 test cases)
 
+
+## Task 1.1: MoonBit Delay DSP Implementation
+
+### Design Decisions
+- **FixedArray for buffer**: Used `FixedArray[Float]` with 192000 samples (2 sec @ 48kHz max)
+- **Ref[T] for mutable state**: All mutable globals use `Ref[T]` pattern (confirmed from Task 0.5)
+  - `write_pos : Ref[Int]`
+  - `sample_rate : Ref[Float]`
+  - `delay_samples : Ref[Int]`
+  - `feedback : Ref[Float]`
+  - `mix : Ref[Float]`
+- **No runtime allocation**: All memory pre-allocated at module load time
+
+### Algorithm Details
+- **Circular buffer**: read_pos calculated as `write_pos - delay_samples` with wraparound
+- **Feedback**: Applied to buffer write: `buffer[write_pos] = input + delayed * feedback`
+- **Mix**: Standard dry/wet: `input * (1-mix) + delayed * mix`
+- **Parameter clamping**: All setters clamp to valid ranges (0.0-1.0 for feedback/mix)
+
+### Build Process (Two-Step moonc)
+1. **Build core IR**:
+   ```bash
+   moonc build-package -target wasm -is-main -pkg yuichkun/suna-dsp \
+     -std-path /root/.moon/lib/core/target/wasm/release/bundle \
+     -o target/wasm/release/build/suna_dsp.core src/lib.mbt src/delay.mbt
+   ```
+
+2. **Link to WASM**:
+   ```bash
+   moonc link-core -main yuichkun/suna-dsp \
+     -exported_functions "multiply,add,increment,get_counter,init_delay,set_delay_time,set_feedback,set_mix,process_sample" \
+     -heap-start-address 65536 -export-memory-name memory \
+     -o target/wasm/release/build/suna_dsp.wasm \
+     target/wasm/release/build/suna_dsp.core \
+     /root/.moon/lib/core/target/wasm/release/bundle/core.core
+   ```
+
+### Test Results
+- 8 tests, all passing
+- Tests cover: init, parameter setting, delayed output, dry signal, feedback echoes, zero delay
+
+### Key Insights
+1. **moon build vs moonc**: `moon build --target wasm` works for tests but doesn't properly export functions. Must use two-step moonc for WASM exports.
+2. **std-path required**: moonc build-package needs `-std-path` to find core library
+3. **core.core linking**: link-core needs both the package .core AND the core library .core
+4. **MoonBit test syntax**: Use `assert_eq(a, b)` not `assert_eq!(a, b)` (deprecated)
+5. **Ignored return values**: Use `let _ = expr` for expressions with unused return values
+
+### WASM Output
+- File size: 2597 bytes
+- Exports: memory, process_sample, set_mix, set_feedback, init_delay, set_delay_time, get_counter, increment, add, multiply, _start
+
