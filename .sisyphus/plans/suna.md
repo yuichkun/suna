@@ -388,7 +388,7 @@ Phase 4: UI Integration
 
 ---
 
-- [ ] 0.4. WAMR AOTコンパイル検証
+- [x] 0.4. WAMR AOTコンパイル検証
 
   **What to do**:
   - WAMRのwamrcをビルド:
