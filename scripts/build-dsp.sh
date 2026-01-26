@@ -13,33 +13,35 @@ WAMRC="$PROJECT_ROOT/libs/wamr/wamr-compiler/build/wamrc"
 
 echo "=== Building MoonBit DSP ==="
 cd "$DSP_DIR"
-moon build --target wasm-gc
+moon build --target wasm
 
-# Verify output
-if [ ! -f "target/wasm-gc/release/build/dsp.wasm" ]; then
-  echo "ERROR: MoonBit build failed - dsp.wasm not found"
+WASM_FILE=$(find target/wasm -name "*.wasm" -type f | head -1)
+if [ -z "$WASM_FILE" ]; then
+  echo "ERROR: MoonBit build failed - no .wasm file found"
   exit 1
 fi
+echo "Found WASM: $WASM_FILE"
 
 echo "=== Copying WASM to UI public directory ==="
 mkdir -p "$UI_PUBLIC_WASM"
-cp target/wasm-gc/release/build/dsp.wasm "$UI_PUBLIC_WASM/dsp.wasm"
-echo "Copied: $UI_PUBLIC_WASM/dsp.wasm"
+cp "$WASM_FILE" "$UI_PUBLIC_WASM/suna_dsp.wasm"
+echo "Copied: $UI_PUBLIC_WASM/suna_dsp.wasm"
 
 echo "=== Compiling WASM to AOT for JUCE ==="
 if [ ! -f "$WAMRC" ]; then
-  echo "ERROR: wamrc not found at $WAMRC"
-  echo "Run: cd libs/wamr/wamr-compiler && mkdir -p build && cd build && cmake .. && make"
-  exit 1
+  echo "WARNING: wamrc not found at $WAMRC"
+  echo "Skipping AOT compilation. To enable:"
+  echo "  cd libs/wamr/wamr-compiler && mkdir -p build && cd build && cmake .. && make"
+  echo "Web build will work without AOT, but JUCE plugin requires it."
+else
+  mkdir -p "$PLUGIN_RESOURCES"
+  "$WAMRC" --opt-level=3 -o "$PLUGIN_RESOURCES/suna_dsp.aot" "$UI_PUBLIC_WASM/suna_dsp.wasm"
+
+  if [ ! -f "$PLUGIN_RESOURCES/suna_dsp.aot" ]; then
+    echo "ERROR: AOT compilation failed - suna_dsp.aot not found"
+    exit 1
+  fi
+
+  echo "Compiled: $PLUGIN_RESOURCES/suna_dsp.aot"
 fi
-
-mkdir -p "$PLUGIN_RESOURCES"
-"$WAMRC" -o "$PLUGIN_RESOURCES/dsp.aot" "$UI_PUBLIC_WASM/dsp.wasm"
-
-if [ ! -f "$PLUGIN_RESOURCES/dsp.aot" ]; then
-  echo "ERROR: AOT compilation failed - dsp.aot not found"
-  exit 1
-fi
-
-echo "Compiled: $PLUGIN_RESOURCES/dsp.aot"
 echo "=== DSP build complete ==="

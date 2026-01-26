@@ -113,3 +113,52 @@ All acceptance criteria met:
 - Test `build:dsp` script end-to-end
 - Verify WASM output and AOT compilation (requires wamrc build)
 
+
+## Task 0.2 Bug Fix: WAMR Compatibility
+
+### Critical Error Discovered
+**Original Issue**: `build-dsp.sh` used `moon build --target wasm-gc`
+- **Problem**: WAMR does NOT support wasm-gc (garbage collection proposal)
+- **Impact**: Would cause complete failure in Task 0.3 and all subsequent tasks
+- **Root Cause**: Misread plan requirement (line 65, 355 explicitly forbids wasm-gc)
+
+### Fixes Applied
+1. **Target Change**: `--target wasm-gc` → `--target wasm`
+   - Line 16: Now uses WAMR-compatible wasm target
+
+2. **Dynamic Path Resolution**: Hardcoded path → `find` command
+   - Old: `target/wasm-gc/release/build/dsp.wasm`
+   - New: `find target/wasm -name "*.wasm" -type f | head -1`
+   - Reason: MoonBit output path may vary by version
+
+3. **File Naming**: `dsp.wasm` → `suna_dsp.wasm`
+   - More explicit naming for multi-project environments
+   - Applied to both web and AOT outputs
+
+4. **AOT Optimization**: Added `--opt-level=3` to wamrc
+   - Per plan line 284: Maximum optimization for JUCE plugin
+   - Command: `wamrc --opt-level=3 -o suna_dsp.aot suna_dsp.wasm`
+
+5. **Graceful Degradation**: wamrc absence now non-fatal
+   - Changed from ERROR → WARNING for early development
+   - Allows web-only workflow before JUCE setup
+   - Still fails if AOT compilation attempted but fails
+
+### Verification Results
+```bash
+grep "wasm-gc" scripts/build-dsp.sh  # → No matches ✅
+grep "target wasm" scripts/build-dsp.sh  # → Line 16 ✅
+grep "opt-level" scripts/build-dsp.sh  # → Line 38 with --opt-level=3 ✅
+```
+
+### Lesson Learned
+**ALWAYS verify target compatibility before writing build scripts**
+- WASM has multiple targets: wasm, wasm-gc, wasm32, wasm64
+- WAMR specifically requires classic wasm (no GC, no threads, no SIMD in some configs)
+- Plan explicitly documented this constraint - should have caught during initial implementation
+
+### Impact on Future Tasks
+- Task 0.3: Will now succeed with correct wasm target
+- Task 0.5: AOT compilation will use proper optimization level
+- Task 0.6: JUCE plugin will receive optimized AOT binary
+
