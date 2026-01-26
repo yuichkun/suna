@@ -744,3 +744,32 @@ Additional exports:
 - @types/node required for process.env access
 - vite-plugin-singlefile conflicts with manualChunks - removed manualChunks
 
+
+## Task 4.2: WebBrowserComponent Integration
+
+### Key Learnings
+
+1. **JUCE WebBrowserComponent Requirements**:
+   - Must set `NEEDS_WEB_BROWSER TRUE` in `juce_add_plugin()` for Linux webkit support
+   - Must set `JUCE_WEB_BROWSER=1` in compile definitions
+   - Linux requires webkit2gtk-4.1 (or 4.0) and gtk+-x11-3.0 packages
+
+2. **WebSliderRelay Pattern** (from kodama reference):
+   - Create relay with parameter ID string: `std::make_unique<juce::WebSliderRelay>("paramId")`
+   - Pass relay to WebBrowserComponent via `.withOptionsFrom(*relay)`
+   - Create attachment: `std::make_unique<juce::WebSliderParameterAttachment>(*param, *relay, nullptr)`
+
+3. **Resource Provider Pattern**:
+   - Use `withResourceProvider()` for serving embedded HTML
+   - Debug mode: return `std::nullopt` (use localhost:5173)
+   - Release mode: serve from BinaryData namespace
+
+4. **Dev/Release Mode Branching**:
+   - `#if JUCE_DEBUG` for localhost HMR
+   - `#else` for `getResourceProviderRoot()` with embedded HTML
+
+5. **BinaryData Generation**:
+   - `juce_add_binary_data()` creates static library with embedded files
+   - Access via `Namespace::filename` and `Namespace::filenameSize`
+   - Underscores replace dots in variable names (index_html)
+
