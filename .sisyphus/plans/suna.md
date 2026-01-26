@@ -755,7 +755,7 @@ Phase 4: UI Integration
 
 ---
 
-- [ ] 2.4. Catch2 プラグインテスト
+- [x] 2.4. Catch2 プラグインテスト
 
   **What to do**:
   - `tests/cpp/plugin_test.cpp`:
