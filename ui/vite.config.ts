@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { viteSingleFile } from 'vite-plugin-singlefile'
@@ -13,12 +14,7 @@ export default defineConfig({
   base: './',
   build: {
     outDir: isWeb ? 'dist-web' : 'dist',
-    assetsInlineLimit: isWeb ? 4096 : 100000000, // Inline everything for JUCE
-    rollupOptions: {
-      output: {
-        manualChunks: isWeb ? undefined : () => 'everything.js'
-      }
-    }
+    assetsInlineLimit: isWeb ? 4096 : 100000000
   },
   server: {
     port: 5173
