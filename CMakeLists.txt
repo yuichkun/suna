@@ -4,8 +4,12 @@ project(Suna VERSION 0.1.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Add JUCE
 add_subdirectory(libs/juce)
 
-# Add plugin
 add_subdirectory(plugin)
+
+option(BUILD_TESTS "Build tests" ON)
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests/cpp)
+endif()

@@ -670,3 +670,26 @@ Additional exports:
 - prepareToPlay() already existed - just calls `wasmDSP_.prepareToPlay()`
 - releaseResources() empty - WasmDSP cleanup in destructor via `shutdown()`
 - Early return with `buffer.clear()` when DSP not initialized
+
+## Task 2.4: Catch2 Plugin Tests
+
+### Test Coverage
+- PluginProcessor instantiation: verifies getName(), acceptsMidi(), producesMidi()
+- prepareToPlay: smoke test for initialization
+- processBlock: verifies output is finite (no NaN/Inf)
+- Parameter changes: tests APVTS parameter access and modification
+- State save/restore: tests getStateInformation/setStateInformation
+
+### JUCE Testing Patterns
+- Access parameters via `getParameters().getParameter("paramName")`
+- Parameters use normalized 0-1 range, not actual values
+- Use `setValueNotifyingHost()` to change parameter values
+- Use `Catch::Approx().margin()` for float comparisons
+- JUCE debug assertions appear in test output but don't fail tests
+
+### Key Insights
+- Plugin tests require JuceHeader.h from build artifacts: `${CMAKE_BINARY_DIR}/plugin/Suna_artefacts/JuceLibraryCode`
+- Tests integrated into main CMake build via `add_subdirectory(tests/cpp)`
+- JUCE_STANDALONE_APPLICATION=1 needed for headless testing
+- Timer/Singleton assertions are normal in non-GUI test context
+- Link against SunaBinaryData for AOT file access
