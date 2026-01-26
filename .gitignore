@@ -10,6 +10,8 @@ ui/dist/
 # CMake build artifacts
 build/
 cmake-build-*/
+libs/wamr/wamr-compiler/build/
+libs/wamr/core/deps/llvm/build/
 
 # IDE
 .vscode/

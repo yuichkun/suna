@@ -267,3 +267,64 @@ $ wasm2wat suna_dsp.wasm | grep "export"
 - Verify build script can locate output file with `find target/wasm -name "*.wasm"`
 - Test AOT compilation with wamrc (requires wamrc build from WAMR)
 
+
+## Task 0.4: WAMR AOT Compilation Verification
+
+### Build Dependencies
+- **CMake**: Required 3.22+, installed 3.28.3 ✅
+- **Ninja**: Build system for LLVM, installed 1.11.1 ✅
+- **ccache**: Compiler cache for faster rebuilds, installed 4.9.1 ✅
+- **libzstd-dev**: Compression library for LLVM, installed 1.5.5 ✅
+
+### LLVM Build Process
+- **Command**: `bash build_llvm.sh` in `/workspace/libs/wamr/wamr-compiler/`
+- **Build Time**: ~30 minutes on aarch64 (ARM64)
+- **Output**: LLVM 18.1.8 compiled with targets: AArch64, ARM, Mips, RISCV, X86
+- **Location**: `/workspace/libs/wamr/core/deps/llvm/build/`
+- **Status**: Successful with minor compiler warnings (redundant move, dangling pointer) - non-critical
+
+### wamrc Compiler Build
+- **Command**: `cmake .. && make -j$(nproc)` in `/workspace/libs/wamr/wamr-compiler/build/`
+- **Build Time**: ~2 minutes (after LLVM)
+- **Output**: wamrc binary (executable)
+- **Version**: 2.4.3 (verified with `./wamrc --version`)
+- **Status**: Successful ✅
+
+### AOT Compilation Results
+- **Input**: `/workspace/dsp/target/wasm/release/build/suna_dsp.wasm` (118 bytes)
+- **Command**: `./wamrc --opt-level=3 -o dsp.aot /workspace/dsp/target/wasm/release/build/suna_dsp.wasm`
+- **Output File**: `dsp.aot` (440 bytes)
+- **Optimization Level**: 3 (as required by plan line 395)
+- **Target**: aarch64-unknown-linux-gnu
+- **Magic Number**: `00 61 6f 74` (`.aot` - WAMR AOT format) ✅
+- **Compilation Time**: <1 second
+- **Exit Code**: 0 (success) ✅
+
+### File Format Verification
+- **File Size**: 440 bytes (reasonable for minimal test functions)
+- **Format**: WAMR AOT binary (verified via hexdump magic number)
+- **Platform**: aarch64 (ARM64) native code
+- **Optimization**: Size level 3 applied
+
+### Key Insights
+1. **LLVM Build is Mandatory**: wamrc requires pre-built LLVM libraries; cannot skip `build_llvm.sh`
+2. **Optimization Level 3**: Correctly applied for real-time audio performance (plan requirement)
+3. **File Size**: 440 bytes is reasonable for minimal WASM module (118 bytes input)
+4. **Compilation Speed**: AOT compilation is very fast (<1s) even on ARM64
+5. **Platform-Specific**: Build targets aarch64 correctly for Docker environment
+
+### .gitignore Updates
+- Added `libs/wamr/wamr-compiler/build/` to exclude build artifacts
+- Added `libs/wamr/core/deps/llvm/build/` to exclude LLVM build directory
+- Existing pattern `*.aot` already covers AOT binaries (line 35)
+
+### Acceptance Criteria Met
+- ✅ `./wamrc --version` → shows version information (2.4.3)
+- ✅ `./wamrc --opt-level=3 -o dsp.aot ...` → exit 0 (success)
+- ✅ `ls dsp.aot` → file exists (440 bytes)
+- ✅ `file dsp.aot` → WAMR AOT format (magic: `.aot`)
+
+### Next Steps
+- AOT compilation pipeline verified and working
+- Ready for JUCE plugin integration (Task 0.5)
+- Build artifacts properly gitignored
