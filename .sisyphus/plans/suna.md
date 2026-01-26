@@ -482,7 +482,7 @@ Phase 4: UI Integration
 
 ### Phase 1: DSP Foundation
 
-- [ ] 1.1. MoonBit Delay DSP実装
+- [x] 1.1. MoonBit Delay DSP実装
 
   **What to do**:
   - グローバル状態をプリミティブ型で管理 (GC影響を最小化):
