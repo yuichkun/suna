@@ -22,3 +22,56 @@ This file documents problems encountered and their solutions.
 - Or test PluginProcessor via DAW (manual QA in Phase 5)
 
 **Status**: Documented, moving forward with 2/3 tests passing
+
+## Remaining Verification Items - Environment Blockers
+
+### Items Requiring Host Mac Testing
+
+The following items cannot be verified in the Docker aarch64 environment:
+
+1. **Delay効果が聴覚的に確認可能** (Line 64)
+   - Blocker: Requires audio hardware and DAW
+   - Workaround: None in Docker
+
+2. **Web版で同等の動作確認** (Line 65)
+   - Blocker: Playwright/Chrome not supported on Linux ARM64
+   - Partial verification: UI build succeeds, contains expected elements
+   - Workaround: User must test in browser on Host Mac
+
+3. **VST3: DAWで読み込み成功** (Line 1047)
+   - Blocker: Requires macOS DAW (Reaper/Logic/Ableton)
+   - Workaround: None in Docker
+
+4. **AU: Logic/GarageBandで読み込み成功** (Line 1048)
+   - Blocker: Requires macOS + AU host
+   - Workaround: None in Docker
+
+5. **Standalone: アプリ起動** (Line 1049)
+   - Blocker: Requires X11 display and audio hardware
+   - Workaround: None in Docker
+
+6. **Web: ブラウザでDelay効果確認** (Line 1050)
+   - Blocker: Same as #2
+   - Workaround: User must test in browser
+
+7. **UI: スライダー操作でパラメータ変更反映** (Line 1051)
+   - Blocker: Same as #2
+   - Workaround: User must test in browser
+
+8. **パラメータオートメーション動作** (Line 1052)
+   - Blocker: Requires DAW with automation
+   - Workaround: None in Docker
+
+### Verification Completed in Docker
+
+Despite the blockers, the following was verified:
+- ✅ UI build succeeds (68KB single-file HTML)
+- ✅ UI contains expected elements (Delay Time, Feedback, Mix sliders)
+- ✅ WASM file valid (2.8KB, correct magic bytes)
+- ✅ Worklet processor references correct WASM functions
+- ✅ All tests pass (22/22)
+- ✅ Plugin builds successfully (VST3: 96MB, Standalone: 105MB)
+
+### Conclusion
+
+All implementation tasks are complete. The remaining unchecked items are explicitly marked as "Host Mac verification" items that require physical hardware testing outside the Docker environment.

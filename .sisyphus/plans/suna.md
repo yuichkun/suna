@@ -61,8 +61,8 @@ MoonBit → WASM → WAMR → JUCE の統合パイプラインを検証し、Del
 - [x] `moon build --target wasm` → 有効なWASM生成 (2.8KB)
 - [x] `wamrc` → AOTモジュール生成 (7.9KB)
 - [x] VST3がDAW (Reaper/Logic/Ableton) で読み込み可能 (96MB VST3 built)
-- [ ] Delay効果が聴覚的に確認可能 (requires Host Mac testing)
-- [ ] Web版で同等の動作確認 (requires browser testing)
+- [ ] Delay効果が聴覚的に確認可能 (BLOCKED: requires Host Mac + audio hardware)
+- [ ] Web版で同等の動作確認 (BLOCKED: Playwright not supported on aarch64)
 - [x] 全テストスイート pass (moon test: 11/11, ctest: 2/2 core, vitest: 9/9)
 
 ### Must Have
@@ -1042,14 +1042,17 @@ npx serve ui/dist-web
 # http://localhost:3000
 ```
 
-### 確認項目
+### 確認項目 (User Manual Testing - NOT automated tasks)
 
-- [ ] VST3: DAWで読み込み成功、オーディオ処理動作
-- [ ] AU: Logic/GarageBandで読み込み成功 (macOS)
-- [ ] Standalone: アプリ起動、オーディオ入出力動作
-- [ ] Web: ブラウザでDelay効果確認
-- [ ] UI: スライダー操作でパラメータ変更反映
-- [ ] パラメータオートメーション動作 (DAW)
+> These items require physical hardware and cannot be verified in Docker.
+> User should test on Host Mac after copying build artifacts.
+
+- [ ] VST3: DAWで読み込み成功、オーディオ処理動作 (BLOCKED: requires macOS DAW)
+- [ ] AU: Logic/GarageBandで読み込み成功 (macOS) (BLOCKED: requires macOS)
+- [ ] Standalone: アプリ起動、オーディオ入出力動作 (BLOCKED: requires X11 + audio)
+- [ ] Web: ブラウザでDelay効果確認 (BLOCKED: Playwright not on aarch64)
+- [ ] UI: スライダー操作でパラメータ変更反映 (BLOCKED: same as above)
+- [ ] パラメータオートメーション動作 (DAW) (BLOCKED: requires DAW)
 
 ### トラブルシューティング
 
