@@ -388,7 +388,7 @@ Task 5 (デバッグログ) ─────────────────�
 
 ---
 
-- [ ] 6. Shutdown Race Condition の修正 (クラッシュ対策)
+- [x] 6. Shutdown Race Condition の修正 (クラッシュ対策)
 
   **What to do**:
   - `/workspace/plugin/src/WasmDSP.cpp` の `shutdown()` を修正
@@ -438,7 +438,7 @@ Task 5 (デバッグログ) ─────────────────�
 
 ---
 
-- [ ] 7. Web UI File Picker の実装 (Kodamaパリティ)
+- [x] 7. Web UI File Picker の実装 (Kodamaパリティ)
 
   **What to do**:
   - Kodamaの `WebAudioControls.vue` パターンを参考に実装
@@ -481,7 +481,7 @@ Task 5 (デバッグログ) ─────────────────�
 
 ---
 
-- [ ] 8. 統合確認と最終検証
+- [x] 8. 統合確認と最終検証
 
   **What to do**:
   - 全ての変更が統合された状態でビルドと動作確認
