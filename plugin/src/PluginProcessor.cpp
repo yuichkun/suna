@@ -48,15 +48,29 @@ void SunaAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
-    if (!dspInitialized_ || buffer.getNumChannels() < 2)
+    if (!dspInitialized_) {
+        buffer.clear();
         return;
+    }
 
-    const int numSamples = buffer.getNumSamples();
-    
-    float* leftChannel = buffer.getWritePointer(0);
-    float* rightChannel = buffer.getWritePointer(1);
+    float delayTime = delayTimeParam_->load();
+    float feedback = feedbackParam_->load() / 100.0f;
+    float mix = mixParam_->load() / 100.0f;
 
-    wasmDSP_.processBlock(leftChannel, rightChannel, leftChannel, rightChannel, numSamples);
+    wasmDSP_.setDelayTime(delayTime);
+    wasmDSP_.setFeedback(feedback);
+    wasmDSP_.setMix(mix);
+
+    auto* leftChannel = buffer.getWritePointer(0);
+    auto* rightChannel = buffer.getNumChannels() > 1 
+                         ? buffer.getWritePointer(1) 
+                         : leftChannel;
+
+    int numSamples = buffer.getNumSamples();
+
+    wasmDSP_.processBlock(leftChannel, rightChannel, 
+                         leftChannel, rightChannel, 
+                         numSamples);
 }
 
 juce::AudioProcessorEditor* SunaAudioProcessor::createEditor()

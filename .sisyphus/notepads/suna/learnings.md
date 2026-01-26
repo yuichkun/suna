@@ -651,3 +651,22 @@ Additional exports:
 - Parameter IDs are strings ("delayTime", "feedback", "mix") - must match exactly
 - `getRawParameterValue()` returns `std::atomic<float>*` for thread-safe access
 - Lambda formatters for display: `[](float value, int) { return juce::String(value, 1) + " ms"; }`
+
+## Task 2.3: processBlock Implementation
+
+### Audio Processing Flow
+- Parameter read: `delayTimeParam_->load()` - atomic read from APVTS
+- Conversion: feedback/mix from % (0-100) to normalized (0-1)
+- Apply: `wasmDSP_.setDelayTime/setFeedback/setMix()` before processing
+- Process: in-place stereo processing via `wasmDSP_.processBlock()`
+
+### Performance Considerations
+- `juce::ScopedNoDenormals` prevents denormal CPU spikes
+- Atomic parameter reads are lock-free
+- In-place processing (same buffer for input/output) avoids allocation
+- Mono fallback: use left channel for both L/R when mono
+
+### Key Insights
+- prepareToPlay() already existed - just calls `wasmDSP_.prepareToPlay()`
+- releaseResources() empty - WasmDSP cleanup in destructor via `shutdown()`
+- Early return with `buffer.clear()` when DSP not initialized
