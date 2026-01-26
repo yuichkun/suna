@@ -632,3 +632,22 @@ Additional exports:
 - JUCE 8.0.12 uses `juce_audio_processors_headless` module
 - Standalone runs but needs ALSA/X11 for full functionality
 - VST3 bundle structure: Suna.vst3/Contents/aarch64-linux/Suna.so
+
+## Task 2.2: AudioProcessorValueTreeState Setup
+
+### Parameter Configuration
+- delayTime: 0-2000ms, default 300ms, step 1.0, display "X.X ms"
+- feedback: 0-100%, default 30%, step 0.1, display "X.X %"
+- mix: 0-100%, default 50%, step 0.1, display "X.X %"
+
+### APVTS Integration
+- APVTS initialized in constructor initializer list BEFORE body
+- `createParameterLayout()` is static - called before object fully constructed
+- Atomic pointers obtained via `getRawParameterValue()` for lock-free audio thread access
+- State persistence via `copyState()`/`replaceState()` with XML serialization
+
+### Key Insights
+- APVTS must be initialized before accessing parameters
+- Parameter IDs are strings ("delayTime", "feedback", "mix") - must match exactly
+- `getRawParameterValue()` returns `std::atomic<float>*` for thread-safe access
+- Lambda formatters for display: `[](float value, int) { return juce::String(value, 1) + " ms"; }`

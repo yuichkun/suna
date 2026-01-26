@@ -31,7 +31,18 @@ public:
     void getStateInformation(juce::MemoryBlock&) override;
     void setStateInformation(const void*, int) override;
 
+    juce::AudioProcessorValueTreeState& getParameters() { return parameters_; }
+
 private:
+    juce::AudioProcessorValueTreeState parameters_;
+    
+    // Atomic parameter pointers (for fast access in processBlock)
+    std::atomic<float>* delayTimeParam_ = nullptr;
+    std::atomic<float>* feedbackParam_ = nullptr;
+    std::atomic<float>* mixParam_ = nullptr;
+    
+    static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    
     suna::WasmDSP wasmDSP_;
     bool dspInitialized_ = false;
 
