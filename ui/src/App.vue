@@ -31,7 +31,7 @@ function updateMix(value: number) {
 
 onMounted(async () => {
   // Check if running in JUCE WebView
-  isJuce.value = !!(window as any).juce
+  isJuce.value = !!(window as any).__JUCE__
 
   if (!isJuce.value) {
     // Web mode - initialize WebRuntime
