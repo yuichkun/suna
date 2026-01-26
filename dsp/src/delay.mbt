@@ -61,8 +61,9 @@ pub fn set_mix(value : Float) -> Unit {
   }
 }
 
-/// Process single sample through delay
-pub fn process_sample(input : Float) -> Float {
+/// Process single sample through delay (internal use)
+/// Returns the WET signal only (delayed sample)
+fn process_sample_wet(input : Float) -> Float {
   let buffer_size = delay_buffer.length()
   
   // Calculate read position (circular buffer)
@@ -82,6 +83,29 @@ pub fn process_sample(input : Float) -> Float {
   // Advance write position
   write_pos.val = (write_pos.val + 1) % buffer_size
   
+  // Return wet signal only
+  delayed
+}
+
+/// Process stereo sample pair through delay (Kodama mono-sum pattern)
+/// Mixes stereo to mono, processes once, returns mixed output for both channels
+pub fn process_stereo(left_in : Float, right_in : Float) -> (Float, Float) {
+  // Mix stereo to mono (like Kodama)
+  let mono_in = (left_in + right_in) * 0.5
+  
+  // Process through delay ONCE (single buffer advance per stereo pair)
+  let wet = process_sample_wet(mono_in)
+  
+  // Apply dry/wet mix to both channels
+  let left_out = left_in * (1.0 - mix.val) + wet * mix.val
+  let right_out = right_in * (1.0 - mix.val) + wet * mix.val
+  
+  (left_out, right_out)
+}
+
+/// Process single sample through delay (legacy, for backwards compatibility)
+pub fn process_sample(input : Float) -> Float {
+  let wet = process_sample_wet(input)
   // Mix dry/wet
-  input * (1.0 - mix.val) + delayed * mix.val
+  input * (1.0 - mix.val) + wet * mix.val
 }

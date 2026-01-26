@@ -22,10 +22,7 @@ SunaAudioProcessor::SunaAudioProcessor()
     }
 }
 
-SunaAudioProcessor::~SunaAudioProcessor()
-{
-    wasmDSP_.shutdown();
-}
+SunaAudioProcessor::~SunaAudioProcessor() = default;
 
 void SunaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {

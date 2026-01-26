@@ -46,9 +46,9 @@ pub fn process_block(
     let left_in = load_f32(left_in_ptr + byte_offset)
     let right_in = load_f32(right_in_ptr + byte_offset)
     
-    // Process through delay (uses global delay state)
-    let left_out = process_sample(left_in)
-    let right_out = process_sample(right_in)
+    // Process through delay (mono-sum stereo, Kodama pattern)
+    // This advances write_pos ONCE per stereo pair (not twice!)
+    let (left_out, right_out) = process_stereo(left_in, right_in)
     
     // Write output samples to linear memory
     store_f32(left_out_ptr + byte_offset, left_out)
