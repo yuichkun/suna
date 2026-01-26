@@ -693,3 +693,12 @@ Additional exports:
 - JUCE_STANDALONE_APPLICATION=1 needed for headless testing
 - Timer/Singleton assertions are normal in non-GUI test context
 - Link against SunaBinaryData for AOT file access
+
+## Task 3.1: Web Project Structure
+
+### Learnings
+- Vue 3 + Vite + Vitest setup requires jsdom for test environment
+- vite-plugin-singlefile works with conditional plugin loading based on VITE_RUNTIME env var
+- Dual mode (web/juce) achieved via environment variable switching
+- vue-tsc ^2.0.0 required for Vue 3.4+ compatibility
+
