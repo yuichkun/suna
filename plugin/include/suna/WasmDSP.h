@@ -1,6 +1,7 @@
 #pragma once
 
 #include "wasm_export.h"
+#include <atomic>
 #include <cstdint>
 #include <cstddef>
 
@@ -85,7 +86,7 @@ public:
     /**
      * Check if DSP is initialized and ready
      */
-    bool isInitialized() const { return initialized_; }
+    bool isInitialized() const { return initialized_.load(); }
 
 private:
     // WAMR runtime objects
@@ -113,8 +114,8 @@ private:
     float* nativeRightOut_ = nullptr;
 
     int maxBlockSize_ = 0;
-    bool initialized_ = false;
-    bool prepared_ = false;
+    std::atomic<bool> initialized_{false};
+    std::atomic<bool> prepared_{false};
 
     static constexpr size_t HEAP_BUF_SIZE = 2 * 1024 * 1024;
     char heapBuf_[HEAP_BUF_SIZE];

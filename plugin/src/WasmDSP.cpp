@@ -1,6 +1,7 @@
 #include "suna/WasmDSP.h"
 #include <cstring>
 #include <cstdlib>
+#include <juce_core/juce_core.h>
 
 namespace suna {
 
@@ -13,12 +14,14 @@ WasmDSP::~WasmDSP() {
 }
 
 bool WasmDSP::initialize(const uint8_t* aotData, size_t size) {
+    DBG("WasmDSP::initialize() - Loading AOT module...");
     if (initialized_) {
         shutdown();
     }
 
     aotDataCopy_ = static_cast<uint8_t*>(std::malloc(size));
     if (!aotDataCopy_) {
+        DBG("WasmDSP::initialize() - Failed: malloc failed");
         return false;
     }
     std::memcpy(aotDataCopy_, aotData, size);
@@ -31,6 +34,7 @@ bool WasmDSP::initialize(const uint8_t* aotData, size_t size) {
     initArgs.mem_alloc_option.pool.heap_size = HEAP_BUF_SIZE;
 
     if (!wasm_runtime_full_init(&initArgs)) {
+        DBG("WasmDSP::initialize() - Failed: wasm_runtime_full_init failed");
         std::free(aotDataCopy_);
         aotDataCopy_ = nullptr;
         return false;
@@ -40,6 +44,7 @@ bool WasmDSP::initialize(const uint8_t* aotData, size_t size) {
     module_ = wasm_runtime_load(aotDataCopy_, static_cast<uint32_t>(aotDataSize_),
                                  errorBuf, sizeof(errorBuf));
     if (!module_) {
+        DBG("WasmDSP::initialize() - Failed: wasm_runtime_load failed - " << errorBuf);
         wasm_runtime_destroy();
         std::free(aotDataCopy_);
         aotDataCopy_ = nullptr;
@@ -51,6 +56,7 @@ bool WasmDSP::initialize(const uint8_t* aotData, size_t size) {
     moduleInst_ = wasm_runtime_instantiate(module_, stackSize, heapSize,
                                             errorBuf, sizeof(errorBuf));
     if (!moduleInst_) {
+        DBG("WasmDSP::initialize() - Failed: wasm_runtime_instantiate failed - " << errorBuf);
         wasm_runtime_unload(module_);
         module_ = nullptr;
         wasm_runtime_destroy();
@@ -61,6 +67,7 @@ bool WasmDSP::initialize(const uint8_t* aotData, size_t size) {
 
     execEnv_ = wasm_runtime_create_exec_env(moduleInst_, stackSize);
     if (!execEnv_) {
+        DBG("WasmDSP::initialize() - Failed: wasm_runtime_create_exec_env failed");
         wasm_runtime_deinstantiate(moduleInst_);
         moduleInst_ = nullptr;
         wasm_runtime_unload(module_);
@@ -72,11 +79,13 @@ bool WasmDSP::initialize(const uint8_t* aotData, size_t size) {
     }
 
     if (!lookupFunctions()) {
+        DBG("WasmDSP::initialize() - Failed: lookupFunctions failed");
         shutdown();
         return false;
     }
 
     initialized_ = true;
+    DBG("WasmDSP::initialize() - Success");
     return true;
 }
 
@@ -98,7 +107,49 @@ bool WasmDSP::allocateBuffers(int maxBlockSize) {
         wasm_runtime_addr_app_to_native(moduleInst_, 0));
     if (!memBase) return false;
 
+    /*
+     * WASM Linear Memory Layout for MoonBit DSP
+     * ==========================================
+     * 
+     * The MoonBit compiler uses heap-start-address: 65536 (0x10000) in moon.pkg.json.
+     * Memory below this is reserved for MoonBit's stack. Memory above is the heap.
+     * 
+     * Layout:
+     * ┌─────────────────────────────────────────────────────────────────┐
+     * │ 0x00000 - 0x0FFFF (0-65535):     MoonBit Stack                  │
+     * │ 0x10000 - 0xDBFFF (65536-900095): MoonBit Heap (delay buffer)   │
+     * │   - Delay buffer: 96000 samples * 2 channels * 4 bytes = 768KB │
+     * │   - Plus MoonBit runtime overhead                               │
+     * │ 0xDBC9F (900000):                Audio Buffer Region Start      │
+     * │   - Left Input  (maxBlockSize * sizeof(float))                  │
+     * │   - Right Input (maxBlockSize * sizeof(float))                  │
+     * │   - Left Output (maxBlockSize * sizeof(float))                  │
+     * │   - Right Output(maxBlockSize * sizeof(float))                  │
+     * └─────────────────────────────────────────────────────────────────┘
+     * 
+     * BUFFER_START = 900000 is chosen to:
+     * 1. Be safely above MoonBit's heap usage (delay buffer ~768KB + overhead)
+     * 2. Leave room for future DSP state expansion
+     * 3. Align with WAMR's 1MB heap allocation (heapSize = 1024 * 1024)
+     * 
+     * WARNING: Do not change this value without updating MoonBit code.
+     * The MoonBit DSP expects audio buffers at this exact offset.
+     */
     constexpr uint32_t BUFFER_START = 900000;
+
+    // Validate WASM memory is large enough for our buffer layout
+    uint32_t requiredSize = BUFFER_START + (4 * bufferBytes);
+    wasm_memory_inst_t memoryInst = wasm_runtime_get_default_memory(moduleInst_);
+    if (memoryInst) {
+        uint64_t pageCount = wasm_memory_get_cur_page_count(memoryInst);
+        uint64_t bytesPerPage = wasm_memory_get_bytes_per_page(memoryInst);
+        uint64_t actualSize = pageCount * bytesPerPage;
+        if (actualSize < requiredSize) {
+            DBG("WasmDSP: WASM memory too small: " << actualSize << " bytes < required " << requiredSize << " bytes");
+            return false;
+        }
+    }
+
     leftInOffset_ = BUFFER_START;
     rightInOffset_ = BUFFER_START + bufferBytes;
     leftOutOffset_ = BUFFER_START + 2 * bufferBytes;
@@ -119,6 +170,7 @@ bool WasmDSP::allocateBuffers(int maxBlockSize) {
 }
 
 void WasmDSP::prepareToPlay(double sampleRate, int maxBlockSize) {
+    DBG("WasmDSP::prepareToPlay() - sampleRate=" << sampleRate << " blockSize=" << maxBlockSize);
     if (!initialized_) return;
 
     if (prepared_ && maxBlockSize_ >= maxBlockSize) {
@@ -152,7 +204,20 @@ void WasmDSP::prepareToPlay(double sampleRate, int maxBlockSize) {
 
 void WasmDSP::processBlock(const float* leftIn, const float* rightIn,
                            float* leftOut, float* rightOut, int numSamples) {
-    if (!prepared_ || numSamples <= 0 || numSamples > maxBlockSize_) return;
+    static bool firstCall = true;
+    if (firstCall) {
+        DBG("WasmDSP::processBlock() - First call with " << numSamples << " samples");
+        firstCall = false;
+    }
+    // Handle uninitialized/unprepared state with passthrough
+    if (!prepared_ || numSamples <= 0 || numSamples > maxBlockSize_) {
+        if (numSamples > 0) {
+            size_t copyBytes = static_cast<size_t>(numSamples) * sizeof(float);
+            std::memcpy(leftOut, leftIn, copyBytes);
+            std::memcpy(rightOut, rightIn, copyBytes);
+        }
+        return;
+    }
 
     size_t copyBytes = static_cast<size_t>(numSamples) * sizeof(float);
     std::memcpy(nativeLeftIn_, leftIn, copyBytes);
@@ -171,9 +236,11 @@ void WasmDSP::processBlock(const float* leftIn, const float* rightIn,
     
     if (!success) {
         const char* exception = wasm_runtime_get_exception(moduleInst_);
-        if (exception) {
-            return;
-        }
+        DBG("WASM call failed: " << (exception ? exception : "unknown error"));
+        
+        std::memcpy(leftOut, leftIn, copyBytes);
+        std::memcpy(rightOut, rightIn, copyBytes);
+        return;
     }
 
     std::memcpy(leftOut, nativeLeftOut_, copyBytes);
