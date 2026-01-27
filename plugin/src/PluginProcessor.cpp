@@ -8,6 +8,15 @@ SunaAudioProcessor::SunaAudioProcessor()
                          .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       parameters_(*this, nullptr, "Parameters", createParameterLayout())
 {
+    // Initialize FileLogger to Desktop
+    auto logFile = juce::File::getSpecialLocation(
+        juce::File::userDesktopDirectory).getChildFile("suna_debug.log");
+    fileLogger_ = std::make_unique<juce::FileLogger>(logFile, "Suna Debug Log");
+    juce::Logger::setCurrentLogger(fileLogger_.get());
+    
+    juce::Logger::writeToLog("SunaAudioProcessor: Constructor started at " + 
+        juce::Time::getCurrentTime().toString(true, true, true, true));
+    
     delayTimeParam_ = parameters_.getRawParameterValue("delayTime");
     feedbackParam_ = parameters_.getRawParameterValue("feedback");
     mixParam_ = parameters_.getRawParameterValue("mix");
@@ -17,15 +26,21 @@ SunaAudioProcessor::SunaAudioProcessor()
         SunaBinaryData::suna_dsp_aotSize
     );
 
-    if (!dspInitialized_) {
-        DBG("Failed to initialize WasmDSP");
-    }
+    juce::Logger::writeToLog("SunaAudioProcessor: WasmDSP initialized: " + 
+        juce::String(dspInitialized_ ? "SUCCESS" : "FAILED"));
 }
 
-SunaAudioProcessor::~SunaAudioProcessor() = default;
+SunaAudioProcessor::~SunaAudioProcessor()
+{
+    juce::Logger::writeToLog("SunaAudioProcessor: Destructor");
+    juce::Logger::setCurrentLogger(nullptr);
+}
 
 void SunaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
+    juce::Logger::writeToLog("SunaAudioProcessor::prepareToPlay - sampleRate: " + 
+        juce::String(sampleRate) + ", blockSize: " + juce::String(samplesPerBlock));
+    
     if (dspInitialized_) {
         wasmDSP_.prepareToPlay(sampleRate, samplesPerBlock);
     }
@@ -37,6 +52,13 @@ void SunaAudioProcessor::releaseResources()
 
 void SunaAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
+    static bool firstCall = true;
+    if (firstCall) {
+        juce::Logger::writeToLog("SunaAudioProcessor::processBlock - First call with " + 
+            juce::String(buffer.getNumSamples()) + " samples");
+        firstCall = false;
+    }
+    
     juce::ScopedNoDenormals noDenormals;
 
     auto totalNumInputChannels = getTotalNumInputChannels();
