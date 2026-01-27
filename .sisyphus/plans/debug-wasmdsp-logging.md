@@ -56,7 +56,7 @@ WasmDSP.cpp の全 DBG() を `juce::Logger::writeToLog()` に置き換え、
 
 ## TODOs
 
-- [ ] 1. Replace all DBG() calls with Logger::writeToLog() in WasmDSP.cpp
+- [x] 1. Replace all DBG() calls with Logger::writeToLog() in WasmDSP.cpp
 
   **What to do**:
   - Line 17: `DBG("WasmDSP::initialize()...` → `juce::Logger::writeToLog(...)`
@@ -94,7 +94,7 @@ WasmDSP.cpp の全 DBG() を `juce::Logger::writeToLog()` に置き換え、
 
 ---
 
-- [ ] 2. Add diagnostic logging for failure paths
+- [x] 2. Add diagnostic logging for failure paths
 
   **What to do**:
   
@@ -197,7 +197,7 @@ WasmDSP::processBlock() - PASSTHROUGH MODE: prepared_=false, numSamples=512, max
 
 ## Success Criteria
 
-- [ ] 全 DBG() が Logger::writeToLog() に置換されている
-- [ ] 追加の診断ログが実装されている
-- [ ] リリースビルドでログ出力される
-- [ ] `~/Desktop/suna_debug.log` で失敗箇所を特定可能
+- [x] 全 DBG() が Logger::writeToLog() に置換されている
+- [x] 追加の診断ログが実装されている
+- [x] リリースビルドでログ出力される
+- [x] `~/Desktop/suna_debug.log` で失敗箇所を特定可能
