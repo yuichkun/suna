@@ -1,44 +1,22 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import SliderControl from './components/SliderControl.vue'
-import { WebRuntime } from './runtime/WebRuntime'
-import type { Runtime } from './runtime/types'
+import { useRuntime } from './composables/useRuntime'
 
-const isJuce = ref(false)
-let runtime: Runtime | null = null
-
-const delayTime = ref(300)
-const feedback = ref(30)
-const mix = ref(50)
+const { runtime, isWeb, isInitialized, initError } = useRuntime()
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const fileName = ref<string | null>(null)
 const isPlaying = ref(false)
 const hasAudio = ref(false)
 
-// Update runtime when parameters change
-function updateDelayTime(value: number) {
-  delayTime.value = value
-  runtime?.setDelayTime(value)
-}
-
-function updateFeedback(value: number) {
-  feedback.value = value
-  runtime?.setFeedback(value)
-}
-
-function updateMix(value: number) {
-  mix.value = value
-  runtime?.setMix(value)
-}
-
 const handleFileSelect = async (event: Event) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
-  if (!file || !runtime) return
+  if (!file || !runtime.value) return
 
   try {
-    await runtime.loadAudioFile?.(file)
+    await runtime.value.loadAudioFile?.(file)
     fileName.value = file.name
     hasAudio.value = true
   } catch (e) {
@@ -47,13 +25,13 @@ const handleFileSelect = async (event: Event) => {
 }
 
 const togglePlayback = () => {
-  if (!runtime) return
+  if (!runtime.value) return
 
   if (isPlaying.value) {
-    runtime.stop?.()
+    runtime.value.stop?.()
     isPlaying.value = false
   } else {
-    runtime.play?.()
+    runtime.value.play?.()
     isPlaying.value = true
   }
 }
@@ -61,30 +39,6 @@ const togglePlayback = () => {
 const openFilePicker = () => {
   fileInput.value?.click()
 }
-
-onMounted(async () => {
-  // Check if running in JUCE WebView
-  isJuce.value = !!(window as any).__JUCE__
-
-  if (!isJuce.value) {
-    // Web mode - initialize WebRuntime
-    runtime = new WebRuntime()
-    try {
-      await runtime.initialize()
-      // Apply initial parameter values
-      runtime.setDelayTime(delayTime.value)
-      runtime.setFeedback(feedback.value)
-      runtime.setMix(mix.value)
-    } catch (e) {
-      console.error('Failed to initialize audio:', e)
-    }
-  }
-  // JUCE mode will use WebSliderRelay (handled in PluginEditor)
-})
-
-onUnmounted(() => {
-  runtime?.destroy()
-})
 </script>
 
 <template>
@@ -96,64 +50,65 @@ onUnmounted(() => {
       </div>
     </header>
 
-    <main class="controls">
-      <SliderControl
-        :modelValue="delayTime"
-        @update:modelValue="updateDelayTime"
-        :min="0"
-        :max="2000"
-        label="Delay Time"
-        unit="ms"
-      />
-      <SliderControl
-        :modelValue="feedback"
-        @update:modelValue="updateFeedback"
-        :min="0"
-        :max="100"
-        label="Feedback"
-        unit="%"
-      />
-      <SliderControl
-        :modelValue="mix"
-        @update:modelValue="updateMix"
-        :min="0"
-        :max="100"
-        label="Mix"
-        unit="%"
-      />
-    </main>
+    <div v-if="isWeb && !isInitialized && !initError" class="init-state">
+      <p>Initializing audio engine...</p>
+    </div>
 
-    <section v-if="!isJuce" class="audio-controls">
-      <input
-        ref="fileInput"
-        type="file"
-        accept="audio/*"
-        class="file-input"
-        @change="handleFileSelect"
-      />
-      
-      <button @click="openFilePicker" class="btn btn-file">
-        Choose Audio File
-      </button>
-      
-      <div class="file-info">
-        <span v-if="fileName" class="file-name">{{ fileName }}</span>
-        <span v-else class="no-file">No file selected</span>
-      </div>
-      
-      <button
-        @click="togglePlayback"
-        :disabled="!hasAudio"
-        class="btn btn-playback"
-        :class="{ 'btn-playing': isPlaying, 'btn-disabled': !hasAudio }"
-      >
-        {{ isPlaying ? 'Stop' : 'Play' }}
-      </button>
-    </section>
+    <div v-else-if="initError" class="init-state error">
+      <p>Error: {{ initError }}</p>
+    </div>
+
+    <template v-else>
+      <main class="controls">
+        <SliderControl
+          parameter-id="delayTime"
+          label="Delay Time"
+          unit="ms"
+        />
+        <SliderControl
+          parameter-id="feedback"
+          label="Feedback"
+          unit="%"
+        />
+        <SliderControl
+          parameter-id="mix"
+          label="Mix"
+          unit="%"
+        />
+      </main>
+
+      <section v-if="isWeb" class="audio-controls">
+        <input
+          ref="fileInput"
+          type="file"
+          accept="audio/*"
+          class="file-input"
+          @change="handleFileSelect"
+        />
+        
+        <button @click="openFilePicker" class="btn btn-file">
+          Choose Audio File
+        </button>
+        
+        <div class="file-info">
+          <span v-if="fileName" class="file-name">{{ fileName }}</span>
+          <span v-else class="no-file">No file selected</span>
+        </div>
+        
+        <button
+          @click="togglePlayback"
+          :disabled="!hasAudio"
+          class="btn btn-playback"
+          :class="{ 'btn-playing': isPlaying, 'btn-disabled': !hasAudio }"
+        >
+          {{ isPlaying ? 'Stop' : 'Play' }}
+        </button>
+      </section>
+    </template>
 
     <footer class="footer">
-      <span class="runtime-badge" :class="{ juce: isJuce }">
-        {{ isJuce ? 'JUCE' : 'WEB' }}
+      <span class="runtime-badge" :class="{ juce: !isWeb }">
+        {{ isWeb ? 'WEB' : 'JUCE' }}
       </span>
     </footer>
   </div>
@@ -300,5 +255,17 @@ onUnmounted(() => {
 
 .no-file {
   font-style: italic;
+}
+
+.init-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+}
+
+.init-state.error {
+  color: #e57373;
 }
 </style>

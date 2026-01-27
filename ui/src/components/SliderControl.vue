@@ -1,20 +1,21 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useParameter } from '@/composables/useRuntime'
+import { useParameter } from '../composables/useRuntime'
 
 const props = defineProps<{
   parameterId: string
-  min: number
-  max: number
   label: string
   unit?: string
 }>()
 
-const { normalizedValue, displayValue, setNormalizedValue } =
+const { normalizedValue, displayValue, setNormalizedValue, properties } =
   useParameter(props.parameterId)
 
+const min = computed(() => properties.value?.start ?? 0)
+const max = computed(() => properties.value?.end ?? 100)
+
 const sliderValue = computed(() => {
-  return normalizedValue.value * (props.max - props.min) + props.min
+  return normalizedValue.value * (max.value - min.value) + min.value
 })
 
 const fillPercent = computed(() => {
@@ -28,7 +29,7 @@ const formattedDisplay = computed(() => {
 function onInput(event: Event) {
   const target = event.target as HTMLInputElement
   const value = parseFloat(target.value)
-  const normalized = (value - props.min) / (props.max - props.min)
+  const normalized = (value - min.value) / (max.value - min.value)
   setNormalizedValue(normalized)
 }
 </script>
@@ -48,7 +49,7 @@ function onInput(event: Event) {
         :min="min"
         :max="max"
         :value="sliderValue"
-        step="0.1"
+        step="1"
         @input="onInput"
       />
     </div>
