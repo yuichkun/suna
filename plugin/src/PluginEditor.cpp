@@ -46,6 +46,7 @@ SunaAudioProcessorEditor::SunaAudioProcessorEditor(SunaAudioProcessor& p)
 #endif
     
     setSize(400, 350);
+    setResizable(true, true);
     
     juce::Logger::writeToLog("SunaAudioProcessorEditor: Constructor complete");
 }
