@@ -218,6 +218,29 @@ void WasmDSP::processBlock(const float* leftIn, const float* rightIn,
         juce::Logger::writeToLog("WasmDSP::processBlock() - First call with " + juce::String(numSamples) + " samples");
         firstCall = false;
     }
+
+    // Initialize WAMR thread environment for audio thread (if not already initialized)
+    // This is required because processBlock runs on the DAW's audio thread,
+    // which is different from the main thread where wasm_runtime_full_init() was called.
+    // See: https://github.com/bytecodealliance/wasm-micro-runtime/blob/main/core/iwasm/include/wasm_export.h#L1030-L1044
+    static thread_local bool threadEnvInitialized = false;
+    if (!threadEnvInitialized) {
+        if (!wasm_runtime_thread_env_inited()) {
+            if (!wasm_runtime_init_thread_env()) {
+                juce::Logger::writeToLog("WasmDSP::processBlock() - FATAL: Failed to init thread env");
+                // Fallback to passthrough
+                if (numSamples > 0) {
+                    size_t copyBytes = static_cast<size_t>(numSamples) * sizeof(float);
+                    std::memcpy(leftOut, leftIn, copyBytes);
+                    std::memcpy(rightOut, rightIn, copyBytes);
+                }
+                return;
+            }
+            juce::Logger::writeToLog("WasmDSP::processBlock() - Thread env initialized for audio thread");
+        }
+        threadEnvInitialized = true;
+    }
+
     // Handle uninitialized/unprepared state with passthrough
     static bool passthroughLogged = false;
     if (!prepared_ || numSamples <= 0 || numSamples > maxBlockSize_) {
