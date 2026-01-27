@@ -8,7 +8,7 @@ const props = defineProps<{
   unit?: string
 }>()
 
-const { normalizedValue, displayValue, setNormalizedValue, properties } =
+const { normalizedValue, displayValue, setNormalizedValue, properties, sliderDragStarted, sliderDragEnded } =
   useParameter(props.parameterId)
 
 const min = computed(() => properties.value?.start ?? 0)
@@ -32,6 +32,17 @@ function onInput(event: Event) {
   const normalized = (value - min.value) / (max.value - min.value)
   setNormalizedValue(normalized)
 }
+
+function onMouseDown() {
+  sliderDragStarted.value?.()
+  
+  // Add window-level mouseup listener to catch mouseup outside element
+  const onWindowMouseUp = () => {
+    sliderDragEnded.value?.()
+    window.removeEventListener('mouseup', onWindowMouseUp)
+  }
+  window.addEventListener('mouseup', onWindowMouseUp)
+}
 </script>
 
 <template>
@@ -51,6 +62,7 @@ function onInput(event: Event) {
         :value="sliderValue"
         step="1"
         @input="onInput"
+        @mousedown="onMouseDown"
       />
     </div>
   </div>
