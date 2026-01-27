@@ -15,17 +15,22 @@ export class WebRuntime implements Runtime {
     this.workletNode = new AudioWorkletNode(this.audioContext, 'suna-processor');
 
     const wasmResponse = await fetch('/wasm/suna_dsp.wasm');
-    const wasmBuffer = await wasmResponse.arrayBuffer();
-    const wasmModule = await WebAssembly.compile(wasmBuffer);
+    const wasmBytes = await wasmResponse.arrayBuffer();
 
-    this.workletNode.port.postMessage({ type: 'init', wasmModule });
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('WASM init timeout')), 5000);
 
-    await new Promise<void>((resolve) => {
       this.workletNode!.port.onmessage = (event) => {
         if (event.data.type === 'ready') {
+          clearTimeout(timeout);
           resolve();
+        } else if (event.data.type === 'error') {
+          clearTimeout(timeout);
+          reject(new Error(event.data.message));
         }
       };
+
+      this.workletNode!.port.postMessage({ type: 'init', wasmBytes });
     });
 
     this.workletNode.connect(this.audioContext.destination);
