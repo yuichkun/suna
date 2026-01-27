@@ -1,29 +1,35 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useParameter } from '@/composables/useRuntime'
 
 const props = defineProps<{
-  modelValue: number
+  parameterId: string
   min: number
   max: number
   label: string
   unit?: string
 }>()
 
-const emit = defineEmits<{
-  'update:modelValue': [value: number]
-}>()
+const { normalizedValue, displayValue, setNormalizedValue } =
+  useParameter(props.parameterId)
 
-const displayValue = computed(() => {
-  return props.unit ? `${props.modelValue.toFixed(1)} ${props.unit}` : props.modelValue.toFixed(1)
+const sliderValue = computed(() => {
+  return normalizedValue.value * (props.max - props.min) + props.min
 })
 
-const normalizedValue = computed(() => {
-  return ((props.modelValue - props.min) / (props.max - props.min)) * 100
+const fillPercent = computed(() => {
+  return normalizedValue.value * 100
+})
+
+const formattedDisplay = computed(() => {
+  return props.unit ? `${displayValue.value} ${props.unit}` : displayValue.value
 })
 
 function onInput(event: Event) {
   const target = event.target as HTMLInputElement
-  emit('update:modelValue', parseFloat(target.value))
+  const value = parseFloat(target.value)
+  const normalized = (value - props.min) / (props.max - props.min)
+  setNormalizedValue(normalized)
 }
 </script>
 
@@ -31,17 +37,17 @@ function onInput(event: Event) {
   <div class="slider-control">
     <div class="slider-header">
       <span class="label">{{ label }}</span>
-      <span class="value">{{ displayValue }}</span>
+      <span class="value">{{ formattedDisplay }}</span>
     </div>
     <div class="slider-track-container">
       <div class="slider-track">
-        <div class="slider-fill" :style="{ width: `${normalizedValue}%` }"></div>
+        <div class="slider-fill" :style="{ width: `${fillPercent}%` }"></div>
       </div>
       <input
         type="range"
         :min="min"
         :max="max"
-        :value="modelValue"
+        :value="sliderValue"
         step="0.1"
         @input="onInput"
       />
