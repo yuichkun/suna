@@ -10,6 +10,42 @@ let delay_samples : Ref[Int] = { val: 0 }
 let feedback : Ref[Float] = { val: 0.3 }
 let mix : Ref[Float] = { val: 0.5 }
 
+// Debug sine wave state (220Hz for DSP verification)
+let sine_phase : Ref[Float] = { val: 0.0 }
+
+// Constants for sine generation
+let pi : Float = 3.14159265358979
+let two_pi : Float = 6.28318530717958
+
+/// Taylor series sine approximation (5-term, no native sin in WASM)
+/// Input should be normalized to [-π, π] for best accuracy
+fn sine_approx(x : Float) -> Float {
+  let x2 = x * x
+  let x3 = x2 * x
+  let x5 = x3 * x2
+  let x7 = x5 * x2
+  x - x3 / 6.0 + x5 / 120.0 - x7 / 5040.0
+}
+
+/// Generate sine wave sample and advance phase
+/// Returns sine value with amplitude 0.3 at 220Hz
+fn generate_sine() -> Float {
+  // Normalize phase to [-π, π] for Taylor series accuracy
+  let normalized = sine_phase.val - pi
+  let sine_val = sine_approx(normalized) * 0.3
+  
+  // Advance phase: 2π * 220 / sample_rate
+  let phase_inc = two_pi * 220.0 / sample_rate.val
+  sine_phase.val = sine_phase.val + phase_inc
+  
+  // Wrap phase to prevent overflow
+  if sine_phase.val >= two_pi {
+    sine_phase.val = sine_phase.val - two_pi
+  }
+  
+  sine_val
+}
+
 /// Initialize delay processor
 /// Returns 0 on success
 pub fn init_delay(sr : Float, max_delay_ms : Float) -> Int {
@@ -96,9 +132,12 @@ pub fn process_stereo(left_in : Float, right_in : Float) -> (Float, Float) {
   // Process through delay ONCE (single buffer advance per stereo pair)
   let wet = process_sample_wet(mono_in)
   
-  // Apply dry/wet mix to both channels
-  let left_out = left_in * (1.0 - mix.val) + wet * mix.val
-  let right_out = right_in * (1.0 - mix.val) + wet * mix.val
+  // DEBUG: Add 220Hz sine wave to wet signal for DSP verification
+  let wet_with_sine = wet + generate_sine()
+  
+  // Apply dry/wet mix to both channels (sine only affects wet signal)
+  let left_out = left_in * (1.0 - mix.val) + wet_with_sine * mix.val
+  let right_out = right_in * (1.0 - mix.val) + wet_with_sine * mix.val
   
   (left_out, right_out)
 }
