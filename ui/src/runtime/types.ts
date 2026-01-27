@@ -16,8 +16,6 @@ export interface ParameterState {
   setScaledValue(value: number): void
   properties: ParameterProperties
   onValueChanged(callback: (value: number) => void): () => void
-  sliderDragStarted?: () => void
-  sliderDragEnded?: () => void
 }
 
 export interface AudioRuntime {

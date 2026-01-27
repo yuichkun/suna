@@ -41,8 +41,6 @@ export function useParameter(parameterId: string) {
   const normalizedValue = ref(0)
   const scaledValue = ref(0)
   const properties = ref<ParameterState['properties'] | null>(null)
-  const sliderDragStarted = ref<(() => void) | null>(null)
-  const sliderDragEnded = ref<(() => void) | null>(null)
   let unsubscribe: (() => void) | null = null
 
   const { runtime: runtimeRef, isInitialized } = useRuntime()
@@ -57,8 +55,6 @@ export function useParameter(parameterId: string) {
     normalizedValue.value = param.getNormalisedValue()
     scaledValue.value = param.getScaledValue()
     properties.value = param.properties
-    sliderDragStarted.value = param.sliderDragStarted ?? null
-    sliderDragEnded.value = param.sliderDragEnded ?? null
 
     unsubscribe?.()
     unsubscribe = param.onValueChanged((newNormalized: number) => {
@@ -97,7 +93,5 @@ export function useParameter(parameterId: string) {
     displayValue,
     setNormalizedValue,
     isInitialized,
-    sliderDragStarted,
-    sliderDragEnded,
   }
 }

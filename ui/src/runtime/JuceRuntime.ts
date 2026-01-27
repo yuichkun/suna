@@ -24,8 +24,6 @@ export class JuceRuntime implements AudioRuntime {
           sliderState.valueChangedEvent.removeListener(listenerId)
         }
       },
-      sliderDragStarted: () => sliderState.sliderDragStarted(),
-      sliderDragEnded: () => sliderState.sliderDragEnded(),
     }
   }
 
