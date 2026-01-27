@@ -1,6 +1,8 @@
 #include "suna/WasmDSP.h"
 #include <cstring>
 #include <cstdlib>
+#include <thread>
+#include <functional>
 #include <juce_core/juce_core.h>
 
 namespace suna {
@@ -218,6 +220,57 @@ void WasmDSP::processBlock(const float* leftIn, const float* rightIn,
         juce::Logger::writeToLog("WasmDSP::processBlock() - First call with " + juce::String(numSamples) + " samples");
         firstCall = false;
     }
+    
+    // === THREAD ENV INITIALIZATION WITH DIAGNOSTICS ===
+    // WAMR requires thread env to be initialized on any thread calling WASM functions.
+    // processBlock runs on DAW's audio thread, different from main thread where
+    // wasm_runtime_full_init() was called.
+    //
+    // Known issue: On some builds, init() returns true but env_inited() stays false.
+    // This diagnostic code helps identify the root cause.
+    static thread_local bool threadEnvInitialized = false;
+    static thread_local int threadInitAttempts = 0;
+    
+    if (!threadEnvInitialized) {
+        threadInitAttempts++;
+        
+        // Get thread ID for logging (truncated for readability)
+        auto threadIdHash = std::hash<std::thread::id>{}(std::this_thread::get_id()) % 10000;
+        
+        bool envInitedBefore = wasm_runtime_thread_env_inited();
+        juce::Logger::writeToLog("WasmDSP DIAG: Thread " + juce::String(threadIdHash) +
+            " - env_inited_before=" + juce::String(envInitedBefore ? "true" : "false") +
+            " - attempt=" + juce::String(threadInitAttempts));
+        
+        if (!envInitedBefore) {
+            bool initResult = wasm_runtime_init_thread_env();
+            bool envInitedAfter = wasm_runtime_thread_env_inited();
+            
+            juce::Logger::writeToLog("WasmDSP DIAG: Thread " + juce::String(threadIdHash) +
+                " - init_result=" + juce::String(initResult ? "true" : "false") +
+                " - env_inited_after=" + juce::String(envInitedAfter ? "true" : "false"));
+            
+            if (!initResult) {
+                juce::Logger::writeToLog("WasmDSP DIAG: FATAL - init_thread_env returned false");
+                if (numSamples > 0) {
+                    size_t copyBytes = static_cast<size_t>(numSamples) * sizeof(float);
+                    std::memcpy(leftOut, leftIn, copyBytes);
+                    std::memcpy(rightOut, rightIn, copyBytes);
+                }
+                return;
+            }
+            
+            if (!envInitedAfter) {
+                // THIS IS THE KEY DIAGNOSTIC:
+                // If we reach here, init returned true but env_inited is still false.
+                // This confirms a TLS issue, symbol resolution problem, or library build issue.
+                juce::Logger::writeToLog("WasmDSP DIAG: ANOMALY - init=true but env_inited=false after init!");
+            }
+        }
+        threadEnvInitialized = true;
+    }
+    // === END THREAD ENV INITIALIZATION ===
+
     // Handle uninitialized/unprepared state with passthrough
     static bool passthroughLogged = false;
     if (!prepared_ || numSamples <= 0 || numSamples > maxBlockSize_) {
