@@ -11,7 +11,10 @@ export default defineConfig({
     // Single-file mode for JUCE embedding
     ...(!isWeb ? [viteSingleFile()] : [])
   ],
-  base: './',
+  define: {
+    'import.meta.env.VITE_RUNTIME': JSON.stringify(process.env.VITE_RUNTIME || 'juce'),
+  },
+  base: isWeb ? '/' : './',
   build: {
     outDir: isWeb ? 'dist-web' : 'dist',
     assetsInlineLimit: isWeb ? 4096 : 100000000
