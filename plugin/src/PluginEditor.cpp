@@ -7,6 +7,8 @@
 SunaAudioProcessorEditor::SunaAudioProcessorEditor(SunaAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p)
 {
+    juce::Logger::writeToLog("SunaAudioProcessorEditor: Constructor started");
+    
     delayTimeRelay = std::make_unique<juce::WebSliderRelay>("delayTime");
     feedbackRelay = std::make_unique<juce::WebSliderRelay>("feedback");
     mixRelay = std::make_unique<juce::WebSliderRelay>("mix");
@@ -44,9 +46,22 @@ SunaAudioProcessorEditor::SunaAudioProcessorEditor(SunaAudioProcessor& p)
 #endif
     
     setSize(400, 350);
+    
+    juce::Logger::writeToLog("SunaAudioProcessorEditor: Constructor complete");
 }
 
-SunaAudioProcessorEditor::~SunaAudioProcessorEditor() = default;
+SunaAudioProcessorEditor::~SunaAudioProcessorEditor()
+{
+    juce::Logger::writeToLog("~SunaAudioProcessorEditor: Destructor started");
+    
+    // Destroy browser first (while relays are still valid)
+    browser.reset();
+    
+    juce::Logger::writeToLog("~SunaAudioProcessorEditor: browser reset complete");
+    
+    // Relays and attachments will auto-destruct after this
+    juce::Logger::writeToLog("~SunaAudioProcessorEditor: Destructor complete");
+}
 
 void SunaAudioProcessorEditor::paint(juce::Graphics& g)
 {
