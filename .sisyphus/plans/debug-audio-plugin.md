@@ -22,8 +22,13 @@
 
 ### Metis Review
 **Identified Gaps** (addressed):
-- Debug sine/logsはdebugビルドでのみ有効に → `#if JUCE_DEBUG`で制御
+- ログはCubaseでも確認したいためFileLoggerを使用(debug/release両対応)
 - スコープ制限: crash修正とwet path検証のみ
+
+### Logging Strategy
+- FileLoggerを使用: `~/Desktop/suna_debug.log` に出力
+- Debug/Release両方で動作
+- processBlockのログは初回のみ(audio thread問題回避)
 
 ---
 
@@ -38,8 +43,8 @@ fact収集のためのデバッグコードを追加し、クラッシュ原因�
 - `plugin/src/PluginProcessor.cpp`: 初期化・processBlockのログ強化
 
 ### Definition of Done
-- [ ] 全てのコード変更が完了している
-- [ ] 変更がコンパイル可能な状態である(構文エラーなし)
+- [x] 全てのコード変更が完了している
+- [x] 変更がコンパイル可能な状態である(構文エラーなし)
 
 ### Must Have
 - wet信号に220Hzのsine波が加算される(mix > 0の時)
@@ -66,24 +71,26 @@ fact収集のためのデバッグコードを追加し、クラッシュ原因�
 ## Task Flow
 
 ```
-Task 1 (sine波追加)
-    ↓
-Task 2 (デストラクタ明示化) ← 並列可能
-    ↓
-Task 3 (ログ追加) ← 並列可能
+Task 1 (sine波追加) ← 独立
+Task 3 (FileLogger設定) ← 先に実行推奨(Loggerを他が使う)
+Task 2 (デストラクタ明示化) ← Task 3の後
 ```
 
 ## Parallelization
 
 | Group | Tasks | Reason |
 |-------|-------|--------|
-| A | 1, 2, 3 | 全て独立したファイル |
+| A | 1, 3 | 独立したファイル、並列実行可能 |
+
+| Task | Depends On | Reason |
+|------|------------|--------|
+| 2 | 3 | Task 2がLogger::writeToLogを使うため、Task 3でLogger設定が必要 |
 
 ---
 
 ## TODOs
 
-- [ ] 1. Add 220Hz sine wave to wet signal in delay.mbt
+- [x] 1. Add 220Hz sine wave to wet signal in delay.mbt
 
   **What to do**:
   - グローバルにsine_phaseを追加
@@ -111,12 +118,12 @@ Task 3 (ログ追加) ← 並列可能
 
 ---
 
-- [ ] 2. Implement explicit destructor for PluginEditor
+- [x] 2. Implement explicit destructor for PluginEditor
 
   **What to do**:
   - `~SunaAudioProcessorEditor() = default;`を明示的な実装に変更
   - デストラクタ内で`browser.reset()`を最初に呼ぶ
-  - デストラクタ開始/終了のDBGログ追加
+  - デストラクタ開始/終了のログ追加(`juce::Logger::writeToLog`)
 
   **Must NOT do**:
   - 他のメンバーの手動reset
@@ -131,7 +138,7 @@ Task 3 (ログ追加) ← 並列可能
   **Acceptance Criteria**:
   - [ ] デストラクタが明示的に実装されている
   - [ ] browser.reset()がデストラクタの最初で呼ばれている
-  - [ ] DBGログがデストラクタ開始/終了時に出力される
+  - [ ] Logger::writeToLogでデストラクタ開始/終了が出力される
   - [ ] コンストラクタにもログが追加されている
 
   **Commit**: YES
@@ -140,16 +147,18 @@ Task 3 (ログ追加) ← 並列可能
 
 ---
 
-- [ ] 3. Add debug logging to PluginProcessor
+- [x] 3. Add FileLogger and debug logging to PluginProcessor
 
   **What to do**:
-  - コンストラクタにWasmDSP初期化結果のログ
+  - コンストラクタでFileLoggerを初期化(`~/Desktop/suna_debug.log`)
+  - WasmDSP初期化結果のログ
   - prepareToPlayにサンプルレート/ブロックサイズのログ
-  - processBlockに初回呼び出しログ(既存の確認・強化)
+  - processBlockに初回呼び出しログのみ(audio thread問題回避)
+  - デストラクタでLogger::setCurrentLogger(nullptr)
 
   **Must NOT do**:
   - 処理ロジックの変更
-  - リリースビルドへの影響
+  - processBlockで毎回ログ出力(audio threadでfile I/Oは危険)
 
   **Parallelizable**: YES (with 1, 2)
 
@@ -159,13 +168,15 @@ Task 3 (ログ追加) ← 並列可能
   - `plugin/src/PluginProcessor.cpp:38-71` - processBlock
 
   **Acceptance Criteria**:
+  - [ ] FileLoggerが初期化され、デスクトップにsuna_debug.logが作成される
   - [ ] WasmDSP初期化成功/失敗がログに出力される
   - [ ] prepareToPlayでsampleRate, blockSizeがログに出力される
-  - [ ] processBlock初回呼び出しがログに出力される
+  - [ ] processBlock初回呼び出しがログに出力される(初回のみ)
+  - [ ] デストラクタでLoggerがクリーンアップされる
 
   **Commit**: YES
-  - Message: `debug(processor): add logging for initialization and processing`
-  - Files: `plugin/src/PluginProcessor.cpp`
+  - Message: `debug(processor): add FileLogger for debugging`
+  - Files: `plugin/src/PluginProcessor.cpp`, `plugin/src/PluginProcessor.h`
 
 ---
 
@@ -174,13 +185,13 @@ Task 3 (ログ追加) ← 並列可能
 | After Task | Message | Files | Verification |
 |------------|---------|-------|--------------|
 | 1 | `feat(dsp): add 220Hz sine wave to wet signal for debugging` | dsp/src/delay.mbt | N/A (user builds) |
+| 3 | `debug(processor): add FileLogger for debugging` | plugin/src/PluginProcessor.cpp, plugin/src/PluginProcessor.h | N/A (user builds) |
 | 2 | `fix(editor): explicit destructor with browser cleanup first` | plugin/src/PluginEditor.cpp | N/A (user builds) |
-| 3 | `debug(processor): add logging for initialization and processing` | plugin/src/PluginProcessor.cpp | N/A (user builds) |
 
 ---
 
 ## Success Criteria
 
 ### Final Checklist
-- [ ] 全てのTODOが完了している
-- [ ] 各ファイルの変更が構文的に正しい
+- [x] 全てのTODOが完了している
+- [x] 各ファイルの変更が構文的に正しい
