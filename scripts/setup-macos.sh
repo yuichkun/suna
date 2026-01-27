@@ -134,7 +134,7 @@ else
     echo "Building libiwasm..."
     mkdir -p "$IWASM_BUILD_DIR"
     cd "$IWASM_BUILD_DIR"
-    cmake ..
+    cmake .. -DWAMR_DISABLE_HW_BOUND_CHECK=1
     make -j$(sysctl -n hw.ncpu)
     echo -e "${GREEN}ok libiwasm built successfully${NC}"
 fi
