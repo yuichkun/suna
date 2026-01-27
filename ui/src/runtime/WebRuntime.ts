@@ -1,11 +1,24 @@
-import type { Runtime } from './types';
+import type { Runtime, AudioRuntime, ParameterState, ParameterProperties } from './types';
 
-export class WebRuntime implements Runtime {
+const PARAMETER_CONFIGS: Record<string, ParameterProperties> = {
+  delayTime: { start: 0, end: 2000, name: 'delayTime', label: 'ms', interval: 1 },
+  feedback: { start: 0, end: 100, name: 'feedback', label: '%', interval: 1 },
+  mix: { start: 0, end: 100, name: 'mix', label: '%', interval: 1 },
+}
+
+export class WebRuntime implements Runtime, AudioRuntime {
+  readonly type = 'web' as const
   private audioContext: AudioContext | null = null;
   private workletNode: AudioWorkletNode | null = null;
   private sourceNode: AudioBufferSourceNode | null = null;
   private audioBuffer: AudioBuffer | null = null;
   private isPlaying = false;
+  private parameterValues: Record<string, number> = { delayTime: 0, feedback: 0, mix: 0 };
+  private parameterCallbacks: Record<string, Set<(value: number) => void>> = {
+    delayTime: new Set(),
+    feedback: new Set(),
+    mix: new Set(),
+  };
 
   async initialize(): Promise<void> {
     this.audioContext = new AudioContext();
@@ -75,15 +88,67 @@ export class WebRuntime implements Runtime {
   }
 
   setDelayTime(ms: number): void {
+    this.parameterValues.delayTime = ms;
     this.workletNode?.port.postMessage({ type: 'param', name: 'delayTime', value: ms });
+    this.notifyCallbacks('delayTime', ms);
   }
 
   setFeedback(percent: number): void {
+    this.parameterValues.feedback = percent;
     this.workletNode?.port.postMessage({ type: 'param', name: 'feedback', value: percent });
+    this.notifyCallbacks('feedback', percent);
   }
 
   setMix(percent: number): void {
+    this.parameterValues.mix = percent;
     this.workletNode?.port.postMessage({ type: 'param', name: 'mix', value: percent });
+    this.notifyCallbacks('mix', percent);
+  }
+
+  private notifyCallbacks(id: string, value: number): void {
+    const config = PARAMETER_CONFIGS[id];
+    if (!config) return;
+    const normalised = (value - config.start) / (config.end - config.start);
+    this.parameterCallbacks[id]?.forEach(cb => cb(normalised));
+  }
+
+  getParameter(id: string): ParameterState | null {
+    const config = PARAMETER_CONFIGS[id];
+    if (!config) return null;
+
+    return {
+      getNormalisedValue: () => {
+        const value = this.parameterValues[id] ?? 0;
+        return (value - config.start) / (config.end - config.start);
+      },
+      setNormalisedValue: (normalised: number) => {
+        const scaled = config.start + normalised * (config.end - config.start);
+        this.setParameter(id, scaled);
+      },
+      getScaledValue: () => this.parameterValues[id] ?? 0,
+      setScaledValue: (value: number) => this.setParameter(id, value),
+      properties: config,
+      onValueChanged: (callback: (value: number) => void) => {
+        this.parameterCallbacks[id]?.add(callback);
+        return () => {
+          this.parameterCallbacks[id]?.delete(callback);
+        };
+      },
+    };
+  }
+
+  setParameter(id: string, value: number): void {
+    switch (id) {
+      case 'delayTime':
+        this.setDelayTime(value);
+        break;
+      case 'feedback':
+        this.setFeedback(value);
+        break;
+      case 'mix':
+        this.setMix(value);
+        break;
+    }
   }
 
   destroy(): void {
