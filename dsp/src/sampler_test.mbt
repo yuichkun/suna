@@ -202,7 +202,9 @@ test "test_multiple_slots_mixing" {
   // Get actual gains at this blend position
   let gain0 = get_slot_gain(0)
   let gain1 = get_slot_gain(1)
-  let expected = 0.2 * gain0 + 0.3 * gain1
+  let sample0 : Float = 0.2
+  let sample1 : Float = 0.3
+  let expected = gain0 * sample0 + gain1 * sample1
   
   // Process - should mix both slots with their respective gains
   let (left, right) = process_sampler_stereo(0.0, 0.0)
