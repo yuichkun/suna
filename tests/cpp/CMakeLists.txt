@@ -61,7 +61,7 @@ target_include_directories(plugin_test PRIVATE
 
 target_compile_definitions(plugin_test PRIVATE
     JUCE_STANDALONE_APPLICATION=1
-    JUCE_WEB_BROWSER=0
+    JUCE_WEB_BROWSER=1
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0
 )
