@@ -22,7 +22,7 @@ const cursorX = computed(() => {
 
 const cursorY = computed(() => {
   // Invert Y: positive Y should move cursor UP (lower pixel value)
-  return PAD_SIZE / 2 - props.y * USABLE_RANGE
+  return PAD_SIZE / 2 - props.y * USABLE_RANGE * -1
 })
 </script>
 
