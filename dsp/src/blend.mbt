@@ -200,35 +200,7 @@ fn cos_approx(x : Float) -> Float {
   }
 }
 
-// Get slot angle by index
-///|
-fn get_slot_angle(slot : Int) -> Float {
-  match slot {
-    0 => SLOT_ANGLE_0
-    1 => SLOT_ANGLE_1
-    2 => SLOT_ANGLE_2
-    3 => SLOT_ANGLE_3
-    4 => SLOT_ANGLE_4
-    5 => SLOT_ANGLE_5
-    6 => SLOT_ANGLE_6
-    _ => SLOT_ANGLE_7
-  }
-}
 
-// Set gain by slot index
-///|
-fn set_gain(slot : Int, value : Float) -> Unit {
-  match slot {
-    0 => gain_0.val = value
-    1 => gain_1.val = value
-    2 => gain_2.val = value
-    3 => gain_3.val = value
-    4 => gain_4.val = value
-    5 => gain_5.val = value
-    6 => gain_6.val = value
-    _ => gain_7.val = value
-  }
-}
 
 // Recalculate all gains based on current blend_x/blend_y
 ///|
