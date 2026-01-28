@@ -85,15 +85,15 @@ class SunaProcessor extends AudioWorkletProcessor {
   process(inputs, outputs) {
     if (!this.initialized || !this.wasm) return true;
 
-    const input = inputs[0];
     const output = outputs[0];
-    if (!input || input.length === 0 || !input[0]) return true;
+    if (!output || output.length === 0) return true;
 
-    const leftIn = input[0];
-    const rightIn = input[1] || input[0];
+    const input = inputs[0];
+    const leftIn = input?.[0] || new Float32Array(output[0].length);
+    const rightIn = input?.[1] || input?.[0] || new Float32Array(output[0].length);
     const leftOut = output[0];
     const rightOut = output[1] || output[0];
-    const numSamples = leftIn.length;
+    const numSamples = leftOut.length;
 
     const memory = this.wasm.memory;
     const leftInView = new Float32Array(memory.buffer, this.leftInPtr, numSamples);
