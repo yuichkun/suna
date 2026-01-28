@@ -64,7 +64,7 @@ class SunaProcessor extends AudioWorkletProcessor {
     const sampleView = new Float32Array(memory.buffer, slotOffset, numSamples);
     sampleView.set(pcmData.subarray(0, numSamples));
     
-    this.wasm.load_sample(slot, slotOffset, numSamples, sampleRate);
+    this.wasm.load_sample(slot, slotOffset, numSamples);
   }
 
   handleClearSlot(slot) {
