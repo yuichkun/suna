@@ -1,43 +1,53 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import SliderControl from './components/SliderControl.vue'
 import { useRuntime } from './composables/useRuntime'
+import { useSampler } from './composables/useSampler'
 
 const { runtime, isWeb, isInitialized, initError } = useRuntime()
+const { loadedBuffers, isPlaying, loadSample, clearSlot, getNextAvailableSlot, play, stop, MAX_SAMPLES } = useSampler()
 
-const fileInput = ref<HTMLInputElement | null>(null)
-const fileName = ref<string | null>(null)
-const isPlaying = ref(false)
-const hasAudio = ref(false)
+const isDragging = ref(false)
 
-const handleFileSelect = async (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-  if (!file || !runtime.value) return
+async function onDrop(event: DragEvent) {
+  isDragging.value = false
+  if (!event.dataTransfer) return
 
-  try {
-    await runtime.value.loadAudioFile?.(file)
-    fileName.value = file.name
-    hasAudio.value = true
-  } catch (e) {
-    console.error('Failed to load audio file:', e)
+  const files = Array.from(event.dataTransfer.files)
+  const audioFiles = files.filter(f =>
+    f.type.startsWith('audio/') || /\.(mp3|wav|ogg|flac|aiff|m4a)$/i.test(f.name)
+  )
+
+  for (const file of audioFiles) {
+    const slot = getNextAvailableSlot()
+    if (slot !== null) {
+      await loadSample(file, slot)
+      const buffer = loadedBuffers.value.get(slot)
+      if (buffer && runtime.value) {
+        await runtime.value.loadSample?.(slot, buffer.pcmData, buffer.sampleRate)
+      }
+    }
   }
 }
 
-const togglePlayback = () => {
+function handleClearSlot(slotIndex: number) {
+  clearSlot(slotIndex)
+  runtime.value?.clearSlot?.(slotIndex)
+}
+
+function togglePlayback() {
   if (!runtime.value) return
 
   if (isPlaying.value) {
-    runtime.value.stop?.()
-    isPlaying.value = false
+    stop()
+    runtime.value.stopAll?.()
   } else {
-    runtime.value.play?.()
-    isPlaying.value = true
+    play()
+    runtime.value.playAll?.()
   }
 }
 
-const openFilePicker = () => {
-  fileInput.value?.click()
+function getSlotData(index: number) {
+  return loadedBuffers.value.get(index)
 }
 </script>
 
@@ -46,7 +56,7 @@ const openFilePicker = () => {
     <header class="header">
       <div class="logo">
         <span class="logo-text">SUNA</span>
-        <span class="logo-sub">DELAY</span>
+        <span class="logo-sub">SAMPLER</span>
       </div>
     </header>
 
@@ -59,51 +69,69 @@ const openFilePicker = () => {
     </div>
 
     <template v-else>
-      <main class="controls">
-        <SliderControl
-          parameter-id="delayTime"
-          label="Delay Time"
-          unit="ms"
-        />
-        <SliderControl
-          parameter-id="feedback"
-          label="Feedback"
-          unit="%"
-        />
-        <SliderControl
-          parameter-id="mix"
-          label="Mix"
-          unit="%"
-        />
-      </main>
-
-      <section v-if="isWeb" class="audio-controls">
-        <input
-          ref="fileInput"
-          type="file"
-          accept="audio/*"
-          class="file-input"
-          @change="handleFileSelect"
-        />
-        
-        <button @click="openFilePicker" class="btn btn-file">
-          Choose Audio File
-        </button>
-        
-        <div class="file-info">
-          <span v-if="fileName" class="file-name">{{ fileName }}</span>
-          <span v-else class="no-file">No file selected</span>
-        </div>
-        
-        <button
-          @click="togglePlayback"
-          :disabled="!hasAudio"
-          class="btn btn-playback"
-          :class="{ 'btn-playing': isPlaying, 'btn-disabled': !hasAudio }"
+      <main class="sampler-container">
+        <!-- Drop Zone -->
+        <div
+          class="drop-zone"
+          :class="{ 'drag-over': isDragging }"
+          @dragover.prevent
+          @dragenter.prevent="isDragging = true"
+          @dragleave.prevent="isDragging = false"
+          @drop.prevent="onDrop"
         >
-          {{ isPlaying ? 'Stop' : 'Play' }}
-        </button>
-      </section>
+          <div class="drop-zone-content">
+            <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M12 4v12m0 0l-4-4m4 4l4-4" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="drop-text">Drop audio files</span>
+            <span class="drop-hint">WAV, MP3, OGG, FLAC</span>
+          </div>
+        </div>
+
+        <!-- Buffer List -->
+        <div class="buffer-list">
+          <div
+            v-for="index in MAX_SAMPLES"
+            :key="index - 1"
+            class="buffer-slot"
+            :class="{ 'slot-filled': getSlotData(index - 1) }"
+          >
+            <span class="slot-index">{{ index }}</span>
+            <template v-if="getSlotData(index - 1)">
+              <span class="slot-name">{{ getSlotData(index - 1)?.fileName }}</span>
+              <button
+                class="slot-delete"
+                @click="handleClearSlot(index - 1)"
+                title="Remove sample"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </template>
+            <span v-else class="slot-empty">Empty</span>
+          </div>
+        </div>
+
+        <!-- Playback Controls -->
+        <div class="playback-controls">
+          <button
+            class="btn btn-playback"
+            :class="{ 'btn-playing': isPlaying }"
+            @click="togglePlayback"
+            :disabled="loadedBuffers.size === 0"
+          >
+            <svg v-if="!isPlaying" class="play-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+            <svg v-else class="stop-icon" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="6" y="6" width="12" height="12" rx="1"/>
+            </svg>
+            <span>{{ isPlaying ? 'Stop' : 'Play All' }}</span>
+          </button>
+        </div>
+      </main>
     </template>
 
     <footer class="footer">
@@ -116,156 +144,316 @@ const openFilePicker = () => {
 
 <style scoped>
 .app {
-  --bg-primary: #0d0d14;
-  --bg-secondary: #14141e;
-  --accent: #628494;
-  --accent-glow: rgba(98, 132, 148, 0.3);
-  --text-primary: #e8e8ec;
-  --text-muted: #5a5a70;
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-tertiary: #1a1a24;
+  --accent: #ff6b4a;
+  --accent-dim: #cc5540;
+  --accent-glow: rgba(255, 107, 74, 0.25);
+  --accent-subtle: rgba(255, 107, 74, 0.08);
+  --text-primary: #f0f0f4;
+  --text-secondary: #a0a0b0;
+  --text-muted: #505068;
+  --border: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.12);
 
   min-height: 100vh;
   background: var(--bg-primary);
-  background-image: 
-    radial-gradient(ellipse at 50% 0%, rgba(98, 132, 148, 0.08) 0%, transparent 60%),
+  background-image:
+    radial-gradient(ellipse at 30% 0%, rgba(255, 107, 74, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 100%, rgba(255, 107, 74, 0.03) 0%, transparent 50%),
     linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
   display: flex;
   flex-direction: column;
-  padding: 32px 24px;
-  max-width: 420px;
+  padding: 28px 20px;
+  max-width: 400px;
   margin: 0 auto;
-  font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  font-family: 'IBM Plex Mono', 'Fira Code', 'SF Mono', monospace;
 }
 
 .header {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 32px;
 }
 
 .logo {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 
 .logo-text {
-  font-size: 32px;
-  font-weight: 700;
-  letter-spacing: 0.3em;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.35em;
   color: var(--text-primary);
-  text-shadow: 0 0 30px var(--accent-glow);
+  text-shadow: 0 0 40px var(--accent-glow);
 }
 
 .logo-sub {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 500;
-  letter-spacing: 0.5em;
+  letter-spacing: 0.6em;
   color: var(--accent);
   text-transform: uppercase;
+  opacity: 0.9;
 }
 
-.controls {
+.sampler-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   flex: 1;
 }
 
+/* Drop Zone */
+.drop-zone {
+  position: relative;
+  border: 1px dashed var(--border-hover);
+  border-radius: 8px;
+  padding: 28px 20px;
+  background: var(--bg-secondary);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.drop-zone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent-subtle) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over {
+  border-color: var(--accent);
+  background: var(--bg-tertiary);
+}
+
+.drop-zone:hover::before,
+.drop-zone.drag-over::before {
+  opacity: 1;
+}
+
+.drop-zone.drag-over {
+  box-shadow: 0 0 24px var(--accent-glow), inset 0 0 20px var(--accent-subtle);
+  transform: scale(1.01);
+}
+
+.drop-zone-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 1;
+}
+
+.drop-icon {
+  width: 32px;
+  height: 32px;
+  color: var(--text-muted);
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.drop-zone:hover .drop-icon,
+.drop-zone.drag-over .drop-icon {
+  color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.drop-text {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.drop-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+/* Buffer List */
+.buffer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+}
+
+.buffer-slot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  background: var(--bg-primary);
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.buffer-slot.slot-filled {
+  border-color: var(--border);
+  background: var(--bg-tertiary);
+}
+
+.buffer-slot.slot-filled:hover {
+  border-color: var(--border-hover);
+}
+
+.slot-index {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.slot-filled .slot-index {
+  color: var(--accent);
+}
+
+.slot-name {
+  flex: 1;
+  font-size: 11px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.02em;
+}
+
+.slot-empty {
+  flex: 1;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  letter-spacing: 0.02em;
+}
+
+.slot-delete {
+  width: 22px;
+  height: 22px;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.slot-delete:hover {
+  background: rgba(255, 107, 74, 0.15);
+  color: var(--accent);
+}
+
+.slot-delete svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Playback Controls */
+.playback-controls {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+  border-color: var(--accent);
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn-playback {
+  min-width: 140px;
+}
+
+.btn-playing {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.play-icon,
+.stop-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Footer */
 .footer {
   display: flex;
   justify-content: center;
-  margin-top: 32px;
+  margin-top: 24px;
 }
 
 .runtime-badge {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 600;
-  letter-spacing: 0.15em;
-  padding: 6px 14px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  letter-spacing: 0.2em;
+  padding: 5px 12px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
   color: var(--text-muted);
   text-transform: uppercase;
 }
 
 .runtime-badge.juce {
   color: var(--accent);
-  border-color: var(--accent);
-  background: rgba(98, 132, 148, 0.1);
+  border-color: var(--accent-dim);
+  background: var(--accent-subtle);
   box-shadow: 0 0 12px var(--accent-glow);
 }
 
-.file-input {
-  display: none;
-}
-
-.audio-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.btn {
-  padding: 12px 20px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-transform: uppercase;
-}
-
-.btn:hover:not(.btn-disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--accent);
-  box-shadow: 0 0 12px var(--accent-glow);
-}
-
-.btn-disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.btn-playing {
-  background: rgba(98, 132, 148, 0.15);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.file-info {
-  text-align: center;
-  padding: 8px;
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.file-name {
-  color: var(--accent);
-  font-weight: 500;
-}
-
-.no-file {
-  font-style: italic;
-}
-
+/* Init States */
 .init-state {
   text-align: center;
-  padding: 40px 20px;
+  padding: 48px 20px;
   color: var(--text-muted);
-  font-size: 12px;
-  letter-spacing: 0.05em;
+  font-size: 11px;
+  letter-spacing: 0.06em;
 }
 
 .init-state.error {
-  color: #e57373;
+  color: #ff6b6b;
 }
 </style>

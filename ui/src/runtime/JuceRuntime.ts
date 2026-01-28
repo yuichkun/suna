@@ -1,5 +1,14 @@
 import type { AudioRuntime, ParameterState } from './types'
-import { getSliderState } from '../juce/index.js'
+import { getSliderState, getNativeFunction } from '../juce/index.js'
+
+function encodeFloat32ToBase64(float32Array: Float32Array): string {
+  const uint8Array = new Uint8Array(float32Array.buffer)
+  let binary = ''
+  for (let i = 0; i < uint8Array.length; i++) {
+    binary += String.fromCharCode(uint8Array[i])
+  }
+  return btoa(binary)
+}
 
 export class JuceRuntime implements AudioRuntime {
   readonly type = 'juce' as const
@@ -38,4 +47,25 @@ export class JuceRuntime implements AudioRuntime {
   getIsPlaying(): boolean { return false }
   hasAudioLoaded(): boolean { return false }
   dispose(): void {}
+
+  async loadSample(slot: number, pcmData: Float32Array, sampleRate: number): Promise<void> {
+    if (typeof window === 'undefined' || !window.__JUCE__) return
+    const base64String = encodeFloat32ToBase64(pcmData)
+    await getNativeFunction('loadSample')(slot, base64String, sampleRate)
+  }
+
+  clearSlot(slot: number): void {
+    if (typeof window === 'undefined' || !window.__JUCE__) return
+    getNativeFunction('clearSlot')(slot)
+  }
+
+  playAll(): void {
+    if (typeof window === 'undefined' || !window.__JUCE__) return
+    getNativeFunction('playAll')()
+  }
+
+  stopAll(): void {
+    if (typeof window === 'undefined' || !window.__JUCE__) return
+    getNativeFunction('stopAll')()
+  }
 }
