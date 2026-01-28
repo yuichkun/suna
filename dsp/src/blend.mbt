@@ -297,8 +297,8 @@ fn recalculate_gains() -> Unit {
     let norm_6 = raw_6 / total
     let norm_7 = raw_7 / total
     // Blend with center: final_gain = (1 - r) * 0.125 + r * normalized_gain
-    let center_weight = 1.0 - r
-    let edge_weight = r
+    let center_weight : Float = 1.0 - r
+    let edge_weight : Float = r
     gain_0.val = center_weight * 0.125 + edge_weight * norm_0
     gain_1.val = center_weight * 0.125 + edge_weight * norm_1
     gain_2.val = center_weight * 0.125 + edge_weight * norm_2
