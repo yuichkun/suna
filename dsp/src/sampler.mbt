@@ -114,7 +114,7 @@ let sampler_sample_rate : Ref[Float] = { val: 48000.0 }
 
 // Helper functions to access buffers by slot index
 ///|
-fn get_sample_buffer(slot : Int) -> FixedArray[Float] {
+pub fn get_sample_buffer(slot : Int) -> FixedArray[Float] {
   match slot {
     0 => sample_buffer_0
     1 => sample_buffer_1
@@ -128,7 +128,7 @@ fn get_sample_buffer(slot : Int) -> FixedArray[Float] {
 }
 
 ///|
-fn get_sample_length(slot : Int) -> Ref[Int] {
+pub fn get_sample_length(slot : Int) -> Ref[Int] {
   match slot {
     0 => sample_length_0
     1 => sample_length_1
