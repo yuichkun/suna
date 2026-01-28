@@ -3,10 +3,10 @@
 
 // Constants
 ///|
-let MAX_SAMPLES : Int = 8
+const MAX_SAMPLES : Int = 8
 
 ///|
-let MAX_SAMPLE_LENGTH : Int = 1440000 // 30 seconds @ 48kHz
+const MAX_SAMPLE_LENGTH : Int = 1440000 // 30 seconds @ 48kHz
 
 // Global state - 8 mono sample buffers
 ///|
