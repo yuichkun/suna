@@ -227,20 +227,30 @@ cmake --build build --config Release
 
 ### DSP Layer (MoonBit)
 
-**8-Slot Sampler:**
-- Each slot: 30 seconds @ 48kHz (1,440,000 samples)
-- Global state via `Ref[T]` (GC-minimized)
-- Pre-allocated `FixedArray[Float]` buffers
+**Dynamic Slot Management (SlotMeta):**
+- `SlotMeta` struct: `{ data_ptr: Int, length: Int, play_pos: Int, playing: Int }`
+- Dynamic array: `slots: Array[SlotMeta]` (grows on demand, no pre-allocation)
+- Each slot metadata: ~16 bytes (4 × Int fields)
+- Total metadata footprint: ~1KB for typical 8-slot setup (vs 46MB pre-allocated in old design)
+- Sample data lives only in WASM Linear Memory (no duplication)
 
-**8-Direction Blend:**
-- Maps gamepad X/Y to 8-slot gains
-- Cosine similarity based weighting
-- Center = silence, edge = full volume
+**Linear Memory Direct Access:**
+- MoonBit reads samples directly from Linear Memory via `sampler_load_f32(data_ptr + play_pos * 4)`
+- No data copy on load - only pointer and length recorded
+- Single source of truth: Host's Linear Memory
+- Memory savings: 46MB freed (50% reduction from old architecture)
+
+**Dynamic Blend Control:**
+- `gains: Array[Ref[Float]]` - dynamic gains array (expands on demand)
+- Slot angles calculated on-demand: `angle = PI/2 - slot * (2π / N)` where N = number of slots
+- Supports any number of slots (not limited to 8)
+- Cosine similarity based weighting: `gain = max(0, cos(angle_diff / 2))`
+- Center blend (X=0, Y=0) = silence, edge = full volume
 
 **WASM Exports:**
 ```
 init_sampler, load_sample, clear_slot, play_all, stop_all,
-get_slot_length, process_block, set_blend_x, set_blend_y
+get_slot_length, get_slot_playing, process_block, set_blend_x, set_blend_y
 ```
 
 ### Plugin Layer (C++/JUCE)
@@ -313,14 +323,20 @@ initError.value = e.message
 // Functions: snake_case
 pub fn init_sampler(sr : Float) -> Int { ... }
 
-// Constants: SCREAMING_SNAKE_CASE
-const MAX_SAMPLES : Int = 8
+// Structs: PascalCase with mutable fields
+struct SlotMeta {
+  mut data_ptr : Int
+  mut length : Int
+  mut play_pos : Int
+  mut playing : Int
+}
 
-// Global state: Ref[T] pattern
-let sample_buffer_0 : FixedArray[Float] = FixedArray::make(1440000, 0.0)
+// Global state: Dynamic arrays (no pre-allocation)
+let slots : Array[SlotMeta] = []
+let gains : Array[Ref[Float]] = []
 
 // Return codes for errors
-if slot < 0 || slot >= MAX_SAMPLES { return -1 }
+if slot < 0 || slot >= slots.length() { return -1 }
 ```
 
 ### C++
