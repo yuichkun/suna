@@ -12,7 +12,15 @@
         "set_feedback",
         "set_mix",
         "process_sample",
-        "process_block"
+        "process_block",
+        "init_sampler",
+        "load_sample",
+        "clear_slot",
+        "play_all",
+        "stop_all",
+        "get_slot_length",
+        "get_slot_playing",
+        "process_sampler_stereo"
       ],
       "heap-start-address": 65536,
       "export-memory-name": "memory"
