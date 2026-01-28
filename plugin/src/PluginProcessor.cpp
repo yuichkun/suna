@@ -68,6 +68,11 @@ void SunaAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         return;
     }
 
+    float blendX = *parameters_.getRawParameterValue("blendX");
+    float blendY = *parameters_.getRawParameterValue("blendY");
+    wasmDSP_.setBlendX(blendX);
+    wasmDSP_.setBlendY(blendY);
+
     auto* leftChannel = buffer.getWritePointer(0);
     auto* rightChannel = buffer.getNumChannels() > 1 
                          ? buffer.getWritePointer(1) 
@@ -103,6 +108,12 @@ void SunaAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 juce::AudioProcessorValueTreeState::ParameterLayout 
 SunaAudioProcessor::createParameterLayout() {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
+    
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "blendX", "Blend X", -1.0f, 1.0f, 0.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "blendY", "Blend Y", -1.0f, 1.0f, 0.0f));
+    
     return { params.begin(), params.end() };
 }
 

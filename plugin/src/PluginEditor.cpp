@@ -67,6 +67,30 @@ SunaAudioProcessorEditor::SunaAudioProcessorEditor(SunaAudioProcessor& p)
                 audioProcessor.getWasmDSP().stopAll();
                 juce::Logger::writeToLog("stopAll: Triggered");
                 complete(juce::var(true));
+            })
+            .withNativeFunction("setBlendX", [this](const auto& params, auto complete) {
+                if (params.size() < 1) {
+                    complete({});
+                    return;
+                }
+                
+                float value = static_cast<float>(params[0]);
+                audioProcessor.getWasmDSP().setBlendX(value);
+                
+                juce::Logger::writeToLog("setBlendX: " + juce::String(value));
+                complete(juce::var(true));
+            })
+            .withNativeFunction("setBlendY", [this](const auto& params, auto complete) {
+                if (params.size() < 1) {
+                    complete({});
+                    return;
+                }
+                
+                float value = static_cast<float>(params[0]);
+                audioProcessor.getWasmDSP().setBlendY(value);
+                
+                juce::Logger::writeToLog("setBlendY: " + juce::String(value));
+                complete(juce::var(true));
             }));
     
     addAndMakeVisible(*browser);

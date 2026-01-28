@@ -114,9 +114,12 @@ bool WasmDSP::lookupFunctions() {
     stopAllFunc_ = wasm_runtime_lookup_function(moduleInst_, "stop_all");
     getSlotLengthFunc_ = wasm_runtime_lookup_function(moduleInst_, "get_slot_length");
     processBlockFunc_ = wasm_runtime_lookup_function(moduleInst_, "process_block");
+    setBlendXFunc_ = wasm_runtime_lookup_function(moduleInst_, "set_blend_x");
+    setBlendYFunc_ = wasm_runtime_lookup_function(moduleInst_, "set_blend_y");
 
     return initSamplerFunc_ && loadSampleFunc_ && clearSlotFunc_ &&
-           playAllFunc_ && stopAllFunc_ && getSlotLengthFunc_ && processBlockFunc_;
+           playAllFunc_ && stopAllFunc_ && getSlotLengthFunc_ && processBlockFunc_ &&
+           setBlendXFunc_ && setBlendYFunc_;
 }
 
 bool WasmDSP::allocateBuffers(int maxBlockSize) {
@@ -378,6 +381,24 @@ void WasmDSP::stopAll() {
     wasm_runtime_call_wasm_a(execEnv_, stopAllFunc_, 0, nullptr, 0, nullptr);
 }
 
+void WasmDSP::setBlendX(float value) {
+    if (!initialized_) return;
+    
+    wasm_val_t args[1] = {
+        { .kind = WASM_F32, .of = { .f32 = value } }
+    };
+    wasm_runtime_call_wasm_a(execEnv_, setBlendXFunc_, 0, nullptr, 1, args);
+}
+
+void WasmDSP::setBlendY(float value) {
+    if (!initialized_) return;
+    
+    wasm_val_t args[1] = {
+        { .kind = WASM_F32, .of = { .f32 = value } }
+    };
+    wasm_runtime_call_wasm_a(execEnv_, setBlendYFunc_, 0, nullptr, 1, args);
+}
+
 int WasmDSP::getSlotLength(int slot) {
     if (!initialized_) return 0;
 
@@ -425,6 +446,8 @@ void WasmDSP::shutdown() {
     stopAllFunc_ = nullptr;
     getSlotLengthFunc_ = nullptr;
     processBlockFunc_ = nullptr;
+    setBlendXFunc_ = nullptr;
+    setBlendYFunc_ = nullptr;
 
     leftInOffset_ = rightInOffset_ = leftOutOffset_ = rightOutOffset_ = 0;
     nativeLeftIn_ = nativeRightIn_ = nativeLeftOut_ = nativeRightOut_ = nullptr;

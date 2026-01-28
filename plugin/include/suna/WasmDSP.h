@@ -51,6 +51,8 @@ public:
     void playAll();
     void stopAll();
     int getSlotLength(int slot);
+    void setBlendX(float value);
+    void setBlendY(float value);
 
     void shutdown();
 
@@ -71,6 +73,8 @@ private:
     wasm_function_inst_t stopAllFunc_ = nullptr;
     wasm_function_inst_t getSlotLengthFunc_ = nullptr;
     wasm_function_inst_t processBlockFunc_ = nullptr;
+    wasm_function_inst_t setBlendXFunc_ = nullptr;
+    wasm_function_inst_t setBlendYFunc_ = nullptr;
 
     uint32_t leftInOffset_ = 0;
     uint32_t rightInOffset_ = 0;
