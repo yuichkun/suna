@@ -54,7 +54,7 @@ class SunaProcessor extends AudioWorkletProcessor {
     if (!this.wasm) return;
 
     const SAMPLE_DATA_START = 1000000;
-    const MAX_SAMPLES_PER_SLOT = 480000;
+    const MAX_SAMPLES_PER_SLOT = 1440000;
     const BYTES_PER_FLOAT = 4;
     
     const slotOffset = SAMPLE_DATA_START + (slot * MAX_SAMPLES_PER_SLOT * BYTES_PER_FLOAT);

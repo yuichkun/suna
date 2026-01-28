@@ -69,7 +69,7 @@ bool WasmDSP::initialize(const uint8_t* aotData, size_t size) {
     }
 
     constexpr uint32_t stackSize = 16384;
-    constexpr uint32_t heapSize = 1024 * 1024;
+    constexpr uint32_t heapSize = 64 * 1024 * 1024;
     moduleInst_ = wasm_runtime_instantiate(module_, stackSize, heapSize,
                                             errorBuf, sizeof(errorBuf));
     if (!moduleInst_) {

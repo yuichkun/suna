@@ -89,7 +89,7 @@ private:
     std::atomic<bool> initialized_{false};
     std::atomic<bool> prepared_{false};
 
-    static constexpr size_t HEAP_BUF_SIZE = 2 * 1024 * 1024;
+    static constexpr size_t HEAP_BUF_SIZE = 128 * 1024 * 1024;
     char heapBuf_[HEAP_BUF_SIZE];
 
     uint8_t* aotDataCopy_ = nullptr;
