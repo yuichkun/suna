@@ -68,11 +68,6 @@ void SunaAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         return;
     }
 
-    float blendX = *parameters_.getRawParameterValue("blendX");
-    float blendY = *parameters_.getRawParameterValue("blendY");
-    wasmDSP_.setBlendX(blendX);
-    wasmDSP_.setBlendY(blendY);
-
     auto* leftChannel = buffer.getWritePointer(0);
     auto* rightChannel = buffer.getNumChannels() > 1 
                          ? buffer.getWritePointer(1) 
