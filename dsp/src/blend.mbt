@@ -238,16 +238,16 @@ fn recalculate_gains() -> Unit {
   // Calculate stick radius (clamped to 0..1)
   let r_raw = sqrt_f32(x * x + y * y)
   let r = clamp_f32(r_raw, 0.0, 1.0)
-  // If at center, all gains equal
+  // If at center, silence (all gains zero)
   if r < 0.001 {
-    gain_0.val = 0.125
-    gain_1.val = 0.125
-    gain_2.val = 0.125
-    gain_3.val = 0.125
-    gain_4.val = 0.125
-    gain_5.val = 0.125
-    gain_6.val = 0.125
-    gain_7.val = 0.125
+    gain_0.val = 0.0
+    gain_1.val = 0.0
+    gain_2.val = 0.0
+    gain_3.val = 0.0
+    gain_4.val = 0.0
+    gain_5.val = 0.0
+    gain_6.val = 0.0
+    gain_7.val = 0.0
     return
   }
   // Calculate stick angle
@@ -296,27 +296,25 @@ fn recalculate_gains() -> Unit {
     let norm_5 = raw_5 / total
     let norm_6 = raw_6 / total
     let norm_7 = raw_7 / total
-    // Blend with center: final_gain = (1 - r) * 0.125 + r * normalized_gain
-    let center_weight : Float = 1.0 - r
-    let edge_weight : Float = r
-    gain_0.val = center_weight * 0.125 + edge_weight * norm_0
-    gain_1.val = center_weight * 0.125 + edge_weight * norm_1
-    gain_2.val = center_weight * 0.125 + edge_weight * norm_2
-    gain_3.val = center_weight * 0.125 + edge_weight * norm_3
-    gain_4.val = center_weight * 0.125 + edge_weight * norm_4
-    gain_5.val = center_weight * 0.125 + edge_weight * norm_5
-    gain_6.val = center_weight * 0.125 + edge_weight * norm_6
-    gain_7.val = center_weight * 0.125 + edge_weight * norm_7
+    // Simple: gain = radius * directional_weight (center = silent)
+    gain_0.val = r * norm_0
+    gain_1.val = r * norm_1
+    gain_2.val = r * norm_2
+    gain_3.val = r * norm_3
+    gain_4.val = r * norm_4
+    gain_5.val = r * norm_5
+    gain_6.val = r * norm_6
+    gain_7.val = r * norm_7
   } else {
-    // Fallback to equal distribution
-    gain_0.val = 0.125
-    gain_1.val = 0.125
-    gain_2.val = 0.125
-    gain_3.val = 0.125
-    gain_4.val = 0.125
-    gain_5.val = 0.125
-    gain_6.val = 0.125
-    gain_7.val = 0.125
+    // Fallback to silence
+    gain_0.val = 0.0
+    gain_1.val = 0.0
+    gain_2.val = 0.0
+    gain_3.val = 0.0
+    gain_4.val = 0.0
+    gain_5.val = 0.0
+    gain_6.val = 0.0
+    gain_7.val = 0.0
   }
 }
 
