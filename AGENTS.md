@@ -16,7 +16,7 @@
 | Action | Allowed | Notes |
 |--------|---------|-------|
 | Edit code files | ✅ Yes | Via Docker mount |
-| Run MoonBit build/test | ✅ Yes | Must install first (see below) |
+| Run MoonBit build/test | ✅ Yes | PATH setup required (see below) |
 | Read/analyze files | ✅ Yes | Full access |
 
 ### What AI Agents CANNOT Do
@@ -30,27 +30,16 @@
 
 ### MoonBit Setup (Required Before DSP Work)
 
-**Note:** MoonBit doesn't provide native Linux ARM64 binaries, but the WASM-based toolchain works via Node.js.
+**MoonBit is pre-installed** at `~/.moon/bin/` but PATH is not set by default.
 
 ```bash
-# Prerequisites: Node.js 24+ and Rust are required
-node --version  # Must be 24+
-which cargo     # Must have Rust installed
-
-# If Rust not installed:
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-source "$HOME/.cargo/env"
-
-# Install MoonBit WASM toolchain (takes ~2 minutes to build)
-curl -fsSL https://raw.githubusercontent.com/moonbitlang/moonbit-compiler/refs/heads/main/install.ts | node
-
-# Add to PATH
+# Add to PATH (required each session)
 export PATH="$HOME/.moon/bin:$PATH"
 
-# Verify installation
+# Verify
 moon version
 
-# Now you can build and test DSP
+# Build and test DSP
 cd /workspace/dsp
 moon build --target wasm
 moon test
@@ -184,8 +173,7 @@ moon test
 ### What AI Agents Can Run (MoonBit Only)
 
 ```bash
-# First time: Install MoonBit
-curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+# MoonBit is pre-installed, just add to PATH
 export PATH="$HOME/.moon/bin:$PATH"
 
 # Build DSP (WASM only - no AOT)
