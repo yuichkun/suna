@@ -30,9 +30,21 @@
 
 ### MoonBit Setup (Required Before DSP Work)
 
+**Note:** MoonBit doesn't provide native Linux ARM64 binaries, but the WASM-based toolchain works via Node.js.
+
 ```bash
-# Install MoonBit CLI in Ubuntu environment
-curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+# Prerequisites: Node.js 24+ and Rust are required
+node --version  # Must be 24+
+which cargo     # Must have Rust installed
+
+# If Rust not installed:
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+source "$HOME/.cargo/env"
+
+# Install MoonBit WASM toolchain (takes ~2 minutes to build)
+curl -fsSL https://raw.githubusercontent.com/moonbitlang/moonbit-compiler/refs/heads/main/install.ts | node
+
+# Add to PATH
 export PATH="$HOME/.moon/bin:$PATH"
 
 # Verify installation
