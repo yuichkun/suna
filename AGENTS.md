@@ -492,6 +492,25 @@ npm run setup:macos
 
 ## Notes for AI Agents
 
+### ⚠️ CRITICAL: Task Planning Rules
+
+**planファイルやtodoツールに「自分で完了にできないタスク」を絶対に入れないでください。**
+
+**禁止される典型的な文言（これらをtodo/planに絶対書くな）:**
+- 「ユーザーにビルドを依頼する」
+- 「DAWで動作確認してもらう」
+- 「M1 Macでnpm run release:vstを実行」
+- 「ユーザーに確認する」
+- 「〇〇をテストしてもらう」
+
+**理由:** oh-my-opencode（このシステム）は未完了タスクについて永遠にAIをpingし続けます。ユーザー側でしか完了できないタスクを積むと、無限ループに陥ります。
+
+**ルールはシンプル: 自分がやること以外はプランに書くな。**
+
+ユーザーへの依頼事項がある場合は、自分のタスクを全て完了した後にメッセージで「次のステップ」として伝えること
+
+---
+
 ### Key Patterns to Follow
 
 1. **Dual Runtime**: Always update both `JuceRuntime.ts` and `WebRuntime.ts` when adding features
