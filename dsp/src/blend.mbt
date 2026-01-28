@@ -200,7 +200,15 @@ fn cos_approx(x : Float) -> Float {
   }
 }
 
-
+// Ensure gain slot exists for dynamic slot expansion
+// Stub: Task 6 will replace with gains: Array[Ref[Float]] implementation
+// Currently, existing gain_0..7 variables handle all slots (Host ensures slot < 8)
+///|
+pub fn ensure_gain_slot(slot : Int) -> Unit {
+  // Task 6: Will expand gains array if slot >= current length
+  // For now, no-op (existing static gains handle all valid slots)
+  ()
+}
 
 // Recalculate all gains based on current blend_x/blend_y
 ///|

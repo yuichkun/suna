@@ -1,12 +1,27 @@
 // 8-slot mono sampler implementation
 // Uses global state with FixedArray for GC-minimized design
 
+// SlotMeta struct - metadata for each sample slot
+// Stores pointer to linear memory, length, playback position, and playing state
+///|
+struct SlotMeta {
+  mut data_ptr : Int    // Linear Memory pointer (byte offset)
+  mut length : Int      // Sample length in frames
+  mut play_pos : Int    // Current playback position
+  mut playing : Int     // Playing flag (0 = stopped, 1 = playing)
+}
+
 // Constants
 ///|
 const MAX_SAMPLES : Int = 8
 
 ///|
 const MAX_SAMPLE_LENGTH : Int = 1440000 // 30 seconds @ 48kHz
+
+// Dynamic slots array - initially empty, will be populated in Task 2+
+// Stores SlotMeta for each loaded sample
+///|
+let slots : Array[SlotMeta] = []
 
 // Global state - 8 mono sample buffers
 ///|
