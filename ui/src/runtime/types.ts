@@ -27,4 +27,6 @@ export interface AudioRuntime {
   clearSlot?(slot: number): void
   playAll?(): void
   stopAll?(): void
+  setBlendX?(value: number): void
+  setBlendY?(value: number): void
 }

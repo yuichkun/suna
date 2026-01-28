@@ -68,4 +68,14 @@ export class JuceRuntime implements AudioRuntime {
     if (typeof window === 'undefined' || !window.__JUCE__) return
     getNativeFunction('stopAll')()
   }
+
+  setBlendX(value: number): void {
+    if (typeof window === 'undefined' || !window.__JUCE__) return
+    getNativeFunction('setBlendX')(value)
+  }
+
+  setBlendY(value: number): void {
+    if (typeof window === 'undefined' || !window.__JUCE__) return
+    getNativeFunction('setBlendY')(value)
+  }
 }

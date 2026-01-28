@@ -58,6 +58,14 @@ export class WebRuntime implements AudioRuntime {
     this.workletNode?.port.postMessage({ type: 'stopAll' });
   }
 
+  setBlendX(value: number): void {
+    this.workletNode?.port.postMessage({ type: 'setBlendX', value });
+  }
+
+  setBlendY(value: number): void {
+    this.workletNode?.port.postMessage({ type: 'setBlendY', value });
+  }
+
   getParameter(id: string): ParameterState | null {
     const config = this.parameterConfigs[id];
     if (!config) return null;
