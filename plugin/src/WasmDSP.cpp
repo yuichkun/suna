@@ -92,14 +92,16 @@ bool WasmDSP::initialize(const uint8_t* aotData, size_t size) {
 }
 
 bool WasmDSP::lookupFunctions() {
-    initDelayFunc_ = wasm_runtime_lookup_function(moduleInst_, "init_delay");
-    setDelayTimeFunc_ = wasm_runtime_lookup_function(moduleInst_, "set_delay_time");
-    setFeedbackFunc_ = wasm_runtime_lookup_function(moduleInst_, "set_feedback");
-    setMixFunc_ = wasm_runtime_lookup_function(moduleInst_, "set_mix");
+    initSamplerFunc_ = wasm_runtime_lookup_function(moduleInst_, "init_sampler");
+    loadSampleFunc_ = wasm_runtime_lookup_function(moduleInst_, "load_sample");
+    clearSlotFunc_ = wasm_runtime_lookup_function(moduleInst_, "clear_slot");
+    playAllFunc_ = wasm_runtime_lookup_function(moduleInst_, "play_all");
+    stopAllFunc_ = wasm_runtime_lookup_function(moduleInst_, "stop_all");
+    getSlotLengthFunc_ = wasm_runtime_lookup_function(moduleInst_, "get_slot_length");
     processBlockFunc_ = wasm_runtime_lookup_function(moduleInst_, "process_block");
 
-    return initDelayFunc_ && setDelayTimeFunc_ && setFeedbackFunc_ &&
-           setMixFunc_ && processBlockFunc_;
+    return initSamplerFunc_ && loadSampleFunc_ && clearSlotFunc_ &&
+           playAllFunc_ && stopAllFunc_ && getSlotLengthFunc_ && processBlockFunc_;
 }
 
 bool WasmDSP::allocateBuffers(int maxBlockSize) {
@@ -164,6 +166,7 @@ bool WasmDSP::allocateBuffers(int maxBlockSize) {
     nativeRightIn_ = reinterpret_cast<float*>(memBase + rightInOffset_);
     nativeLeftOut_ = reinterpret_cast<float*>(memBase + leftOutOffset_);
     nativeRightOut_ = reinterpret_cast<float*>(memBase + rightOutOffset_);
+    nativeSampleData_ = reinterpret_cast<float*>(memBase + SAMPLE_DATA_START);
 
     std::memset(nativeLeftIn_, 0, bufferBytes);
     std::memset(nativeRightIn_, 0, bufferBytes);
@@ -183,18 +186,18 @@ void WasmDSP::prepareToPlay(double sampleRate, int maxBlockSize) {
     }
 
     if (prepared_ && maxBlockSize_ >= maxBlockSize) {
-        wasm_val_t args[2] = {
-            { .kind = WASM_F32, .of = { .f32 = static_cast<float>(sampleRate) } },
-            { .kind = WASM_F32, .of = { .f32 = 2000.0f } }
+        wasm_val_t args[1] = {
+            { .kind = WASM_F32, .of = { .f32 = static_cast<float>(sampleRate) } }
         };
         wasm_val_t results[1] = { { .kind = WASM_I32, .of = { .i32 = 0 } } };
-        wasm_runtime_call_wasm_a(execEnv_, initDelayFunc_, 1, results, 2, args);
+        wasm_runtime_call_wasm_a(execEnv_, initSamplerFunc_, 1, results, 1, args);
         return;
     }
 
     if (prepared_) {
         leftInOffset_ = rightInOffset_ = leftOutOffset_ = rightOutOffset_ = 0;
         nativeLeftIn_ = nativeRightIn_ = nativeLeftOut_ = nativeRightOut_ = nullptr;
+        nativeSampleData_ = nullptr;
     }
 
     if (!allocateBuffers(maxBlockSize)) {
@@ -202,12 +205,11 @@ void WasmDSP::prepareToPlay(double sampleRate, int maxBlockSize) {
         return;
     }
 
-    wasm_val_t args[2] = {
-        { .kind = WASM_F32, .of = { .f32 = static_cast<float>(sampleRate) } },
-        { .kind = WASM_F32, .of = { .f32 = 2000.0f } }
+    wasm_val_t args[1] = {
+        { .kind = WASM_F32, .of = { .f32 = static_cast<float>(sampleRate) } }
     };
     wasm_val_t results[1] = { { .kind = WASM_I32, .of = { .i32 = 0 } } };
-    wasm_runtime_call_wasm_a(execEnv_, initDelayFunc_, 1, results, 2, args);
+    wasm_runtime_call_wasm_a(execEnv_, initSamplerFunc_, 1, results, 1, args);
 
     prepared_ = true;
     juce::Logger::writeToLog("WasmDSP::prepareToPlay() - Success, prepared_=true");
@@ -323,31 +325,53 @@ void WasmDSP::processBlock(const float* leftIn, const float* rightIn,
     std::memcpy(rightOut, nativeRightOut_, copyBytes);
 }
 
-void WasmDSP::setDelayTime(float ms) {
-    if (!initialized_) return;
+void WasmDSP::loadSample(int slot, const float* data, int length) {
+    if (!initialized_ || !nativeSampleData_) return;
 
-    wasm_val_t args[1] = {
-        { .kind = WASM_F32, .of = { .f32 = ms } }
+    constexpr int MAX_SAMPLES_PER_SLOT = 1440000;
+    int copyLength = (length > MAX_SAMPLES_PER_SLOT) ? MAX_SAMPLES_PER_SLOT : length;
+    
+    uint32_t slotOffset = static_cast<uint32_t>(slot) * MAX_SAMPLES_PER_SLOT;
+    std::memcpy(nativeSampleData_ + slotOffset, data, static_cast<size_t>(copyLength) * sizeof(float));
+
+    uint32_t dataPtr = SAMPLE_DATA_START + slotOffset * sizeof(float);
+    wasm_val_t args[3] = {
+        { .kind = WASM_I32, .of = { .i32 = slot } },
+        { .kind = WASM_I32, .of = { .i32 = static_cast<int32_t>(dataPtr) } },
+        { .kind = WASM_I32, .of = { .i32 = copyLength } }
     };
-    wasm_runtime_call_wasm_a(execEnv_, setDelayTimeFunc_, 0, nullptr, 1, args);
+    wasm_val_t results[1] = { { .kind = WASM_I32, .of = { .i32 = 0 } } };
+    wasm_runtime_call_wasm_a(execEnv_, loadSampleFunc_, 1, results, 3, args);
 }
 
-void WasmDSP::setFeedback(float value) {
+void WasmDSP::clearSlot(int slot) {
     if (!initialized_) return;
 
     wasm_val_t args[1] = {
-        { .kind = WASM_F32, .of = { .f32 = value } }
+        { .kind = WASM_I32, .of = { .i32 = slot } }
     };
-    wasm_runtime_call_wasm_a(execEnv_, setFeedbackFunc_, 0, nullptr, 1, args);
+    wasm_runtime_call_wasm_a(execEnv_, clearSlotFunc_, 0, nullptr, 1, args);
 }
 
-void WasmDSP::setMix(float value) {
+void WasmDSP::playAll() {
     if (!initialized_) return;
+    wasm_runtime_call_wasm_a(execEnv_, playAllFunc_, 0, nullptr, 0, nullptr);
+}
+
+void WasmDSP::stopAll() {
+    if (!initialized_) return;
+    wasm_runtime_call_wasm_a(execEnv_, stopAllFunc_, 0, nullptr, 0, nullptr);
+}
+
+int WasmDSP::getSlotLength(int slot) {
+    if (!initialized_) return 0;
 
     wasm_val_t args[1] = {
-        { .kind = WASM_F32, .of = { .f32 = value } }
+        { .kind = WASM_I32, .of = { .i32 = slot } }
     };
-    wasm_runtime_call_wasm_a(execEnv_, setMixFunc_, 0, nullptr, 1, args);
+    wasm_val_t results[1] = { { .kind = WASM_I32, .of = { .i32 = 0 } } };
+    wasm_runtime_call_wasm_a(execEnv_, getSlotLengthFunc_, 1, results, 1, args);
+    return results[0].of.i32;
 }
 
 void WasmDSP::shutdown() {
@@ -379,14 +403,17 @@ void WasmDSP::shutdown() {
         aotDataCopy_ = nullptr;
     }
 
-    initDelayFunc_ = nullptr;
-    setDelayTimeFunc_ = nullptr;
-    setFeedbackFunc_ = nullptr;
-    setMixFunc_ = nullptr;
+    initSamplerFunc_ = nullptr;
+    loadSampleFunc_ = nullptr;
+    clearSlotFunc_ = nullptr;
+    playAllFunc_ = nullptr;
+    stopAllFunc_ = nullptr;
+    getSlotLengthFunc_ = nullptr;
     processBlockFunc_ = nullptr;
 
     leftInOffset_ = rightInOffset_ = leftOutOffset_ = rightOutOffset_ = 0;
     nativeLeftIn_ = nativeRightIn_ = nativeLeftOut_ = nativeRightOut_ = nullptr;
+    nativeSampleData_ = nullptr;
     maxBlockSize_ = 0;
     aotDataSize_ = 0;
 }
