@@ -1,10 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRuntime } from './composables/useRuntime'
 import { useSampler } from './composables/useSampler'
+import { useGamepad } from './composables/useGamepad'
+import XYPadDisplay from './components/XYPadDisplay.vue'
 
 const { runtime, isWeb, isInitialized, initError } = useRuntime()
 const { loadedBuffers, isPlaying, loadSample, clearSlot, getNextAvailableSlot, play, stop, MAX_SAMPLES } = useSampler()
+const { isConnected, rightStickX, rightStickY } = useGamepad()
+
+// Send gamepad input to runtime
+watch([rightStickX, rightStickY], ([x, y]) => {
+  runtime.value?.setBlendX?.(x)
+  runtime.value?.setBlendY?.(y)
+})
 
 const isDragging = ref(false)
 
@@ -114,22 +123,32 @@ function getSlotData(index: number) {
           </div>
         </div>
 
-        <!-- Playback Controls -->
-        <div class="playback-controls">
-          <button
-            class="btn btn-playback"
-            :class="{ 'btn-playing': isPlaying }"
-            @click="togglePlayback"
-            :disabled="loadedBuffers.size === 0"
-          >
-            <svg v-if="!isPlaying" class="play-icon" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M8 5v14l11-7z"/>
-            </svg>
-            <svg v-else class="stop-icon" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="6" y="6" width="12" height="12" rx="1"/>
-            </svg>
-            <span>{{ isPlaying ? 'Stop' : 'Play All' }}</span>
-          </button>
+        <!-- Controls Row: XYPad + Playback -->
+        <div class="controls-row">
+          <!-- XY Pad Display -->
+          <XYPadDisplay
+            :x="rightStickX"
+            :y="rightStickY"
+            :is-connected="isConnected"
+          />
+
+          <!-- Playback Controls -->
+          <div class="playback-controls">
+            <button
+              class="btn btn-playback"
+              :class="{ 'btn-playing': isPlaying }"
+              @click="togglePlayback"
+              :disabled="loadedBuffers.size === 0"
+            >
+              <svg v-if="!isPlaying" class="play-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              <svg v-else class="stop-icon" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="6" width="12" height="12" rx="1"/>
+              </svg>
+              <span>{{ isPlaying ? 'Stop' : 'Play All' }}</span>
+            </button>
+          </div>
         </div>
       </main>
     </template>
@@ -365,11 +384,18 @@ function getSlotData(index: number) {
   height: 100%;
 }
 
+/* Controls Row */
+.controls-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
 /* Playback Controls */
 .playback-controls {
   display: flex;
   justify-content: center;
-  padding-top: 8px;
 }
 
 .btn {
