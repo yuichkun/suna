@@ -142,3 +142,35 @@ std::optional<juce::WebBrowserComponent::Resource> SunaAudioProcessorEditor::get
     return std::nullopt;
 #endif
 }
+
+void SunaAudioProcessorEditor::grabWebViewFocusIfSafe()
+{
+    if (auto* window = getTopLevelComponent()) {
+        bool isActive = window->isOnDesktop() && 
+                        !window->isCurrentlyBlockedByAnotherModalComponent();
+        if (isActive && isShowing() && browser != nullptr) {
+            browser->grabKeyboardFocus();
+            juce::Logger::writeToLog("WebView focus grabbed");
+        }
+    }
+}
+
+void SunaAudioProcessorEditor::visibilityChanged()
+{
+    AudioProcessorEditor::visibilityChanged();
+    if (isVisible()) {
+        grabWebViewFocusIfSafe();
+    }
+}
+
+void SunaAudioProcessorEditor::parentHierarchyChanged()
+{
+    AudioProcessorEditor::parentHierarchyChanged();
+    grabWebViewFocusIfSafe();
+}
+
+void SunaAudioProcessorEditor::mouseDown(const juce::MouseEvent& event)
+{
+    AudioProcessorEditor::mouseDown(event);
+    grabWebViewFocusIfSafe();
+}
