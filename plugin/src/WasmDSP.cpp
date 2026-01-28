@@ -3,7 +3,22 @@
 #include <cstdlib>
 #include <thread>
 #include <functional>
+#include <string>
+
+// Conditional JUCE support for standalone test builds
+#if __has_include(<juce_core/juce_core.h>)
 #include <juce_core/juce_core.h>
+#define SUNA_HAS_JUCE 1
+#else
+#define SUNA_HAS_JUCE 0
+#endif
+
+// Logging macro - no-op when JUCE is not available
+#if SUNA_HAS_JUCE
+#define SUNA_LOG(msg) juce::Logger::writeToLog(msg)
+#else
+#define SUNA_LOG(msg) ((void)0)
+#endif
 
 namespace suna {
 
@@ -16,14 +31,14 @@ WasmDSP::~WasmDSP() {
 }
 
 bool WasmDSP::initialize(const uint8_t* aotData, size_t size) {
-    juce::Logger::writeToLog("WasmDSP::initialize() - Loading AOT module...");
+    SUNA_LOG("WasmDSP::initialize() - Loading AOT module...");
     if (initialized_) {
         shutdown();
     }
 
     aotDataCopy_ = static_cast<uint8_t*>(std::malloc(size));
     if (!aotDataCopy_) {
-        juce::Logger::writeToLog("WasmDSP::initialize() - Failed: malloc failed");
+        SUNA_LOG("WasmDSP::initialize() - Failed: malloc failed");
         return false;
     }
     std::memcpy(aotDataCopy_, aotData, size);
@@ -36,7 +51,7 @@ bool WasmDSP::initialize(const uint8_t* aotData, size_t size) {
     initArgs.mem_alloc_option.pool.heap_size = HEAP_BUF_SIZE;
 
     if (!wasm_runtime_full_init(&initArgs)) {
-        juce::Logger::writeToLog("WasmDSP::initialize() - Failed: wasm_runtime_full_init failed");
+        SUNA_LOG("WasmDSP::initialize() - Failed: wasm_runtime_full_init failed");
         std::free(aotDataCopy_);
         aotDataCopy_ = nullptr;
         return false;
@@ -46,7 +61,7 @@ bool WasmDSP::initialize(const uint8_t* aotData, size_t size) {
     module_ = wasm_runtime_load(aotDataCopy_, static_cast<uint32_t>(aotDataSize_),
                                  errorBuf, sizeof(errorBuf));
     if (!module_) {
-        juce::Logger::writeToLog("WasmDSP::initialize() - Failed: wasm_runtime_load failed - " + juce::String(errorBuf));
+        SUNA_LOG(std::string("WasmDSP::initialize() - Failed: wasm_runtime_load failed - ") + errorBuf);
         wasm_runtime_destroy();
         std::free(aotDataCopy_);
         aotDataCopy_ = nullptr;
@@ -58,7 +73,7 @@ bool WasmDSP::initialize(const uint8_t* aotData, size_t size) {
     moduleInst_ = wasm_runtime_instantiate(module_, stackSize, heapSize,
                                             errorBuf, sizeof(errorBuf));
     if (!moduleInst_) {
-        juce::Logger::writeToLog("WasmDSP::initialize() - Failed: wasm_runtime_instantiate failed - " + juce::String(errorBuf));
+        SUNA_LOG(std::string("WasmDSP::initialize() - Failed: wasm_runtime_instantiate failed - ") + errorBuf);
         wasm_runtime_unload(module_);
         module_ = nullptr;
         wasm_runtime_destroy();
@@ -69,7 +84,7 @@ bool WasmDSP::initialize(const uint8_t* aotData, size_t size) {
 
     execEnv_ = wasm_runtime_create_exec_env(moduleInst_, stackSize);
     if (!execEnv_) {
-        juce::Logger::writeToLog("WasmDSP::initialize() - Failed: wasm_runtime_create_exec_env failed");
+        SUNA_LOG("WasmDSP::initialize() - Failed: wasm_runtime_create_exec_env failed");
         wasm_runtime_deinstantiate(moduleInst_);
         moduleInst_ = nullptr;
         wasm_runtime_unload(module_);
@@ -81,13 +96,13 @@ bool WasmDSP::initialize(const uint8_t* aotData, size_t size) {
     }
 
     if (!lookupFunctions()) {
-        juce::Logger::writeToLog("WasmDSP::initialize() - Failed: lookupFunctions failed");
+        SUNA_LOG("WasmDSP::initialize() - Failed: lookupFunctions failed");
         shutdown();
         return false;
     }
 
     initialized_ = true;
-    juce::Logger::writeToLog("WasmDSP::initialize() - Success");
+    SUNA_LOG("WasmDSP::initialize() - Success");
     return true;
 }
 
@@ -110,7 +125,7 @@ bool WasmDSP::allocateBuffers(int maxBlockSize) {
     uint8_t* memBase = static_cast<uint8_t*>(
         wasm_runtime_addr_app_to_native(moduleInst_, 0));
     if (!memBase) {
-        juce::Logger::writeToLog("WasmDSP::allocateBuffers() - Failed: memBase is null");
+        SUNA_LOG("WasmDSP::allocateBuffers() - Failed: memBase is null");
         return false;
     }
 
@@ -152,7 +167,7 @@ bool WasmDSP::allocateBuffers(int maxBlockSize) {
         uint64_t bytesPerPage = wasm_memory_get_bytes_per_page(memoryInst);
         uint64_t actualSize = pageCount * bytesPerPage;
         if (actualSize < requiredSize) {
-            juce::Logger::writeToLog("WasmDSP: WASM memory too small: " + juce::String(actualSize) + " bytes < required " + juce::String(requiredSize) + " bytes");
+            SUNA_LOG("WasmDSP: WASM memory too small: " + std::to_string(actualSize) + " bytes < required " + std::to_string(requiredSize) + " bytes");
             return false;
         }
     }
@@ -174,14 +189,14 @@ bool WasmDSP::allocateBuffers(int maxBlockSize) {
     std::memset(nativeRightOut_, 0, bufferBytes);
 
     maxBlockSize_ = maxBlockSize;
-    juce::Logger::writeToLog("WasmDSP::allocateBuffers() - Success, maxBlockSize=" + juce::String(maxBlockSize));
+    SUNA_LOG("WasmDSP::allocateBuffers() - Success, maxBlockSize=" + std::to_string(maxBlockSize));
     return true;
 }
 
 void WasmDSP::prepareToPlay(double sampleRate, int maxBlockSize) {
-    juce::Logger::writeToLog("WasmDSP::prepareToPlay() - sampleRate=" + juce::String(sampleRate) + " blockSize=" + juce::String(maxBlockSize));
+    SUNA_LOG("WasmDSP::prepareToPlay() - sampleRate=" + std::to_string(sampleRate) + " blockSize=" + std::to_string(maxBlockSize));
     if (!initialized_) {
-        juce::Logger::writeToLog("WasmDSP::prepareToPlay() - Aborted: not initialized");
+        SUNA_LOG("WasmDSP::prepareToPlay() - Aborted: not initialized");
         return;
     }
 
@@ -201,7 +216,7 @@ void WasmDSP::prepareToPlay(double sampleRate, int maxBlockSize) {
     }
 
     if (!allocateBuffers(maxBlockSize)) {
-        juce::Logger::writeToLog("WasmDSP::prepareToPlay() - Failed: allocateBuffers returned false");
+        SUNA_LOG("WasmDSP::prepareToPlay() - Failed: allocateBuffers returned false");
         return;
     }
 
@@ -212,14 +227,14 @@ void WasmDSP::prepareToPlay(double sampleRate, int maxBlockSize) {
     wasm_runtime_call_wasm_a(execEnv_, initSamplerFunc_, 1, results, 1, args);
 
     prepared_ = true;
-    juce::Logger::writeToLog("WasmDSP::prepareToPlay() - Success, prepared_=true");
+    SUNA_LOG("WasmDSP::prepareToPlay() - Success, prepared_=true");
 }
 
 void WasmDSP::processBlock(const float* leftIn, const float* rightIn,
                            float* leftOut, float* rightOut, int numSamples) {
     static bool firstCall = true;
     if (firstCall) {
-        juce::Logger::writeToLog("WasmDSP::processBlock() - First call with " + juce::String(numSamples) + " samples");
+        SUNA_LOG("WasmDSP::processBlock() - First call with " + std::to_string(numSamples) + " samples");
         firstCall = false;
     }
     
@@ -240,20 +255,20 @@ void WasmDSP::processBlock(const float* leftIn, const float* rightIn,
         auto threadIdHash = std::hash<std::thread::id>{}(std::this_thread::get_id()) % 10000;
         
         bool envInitedBefore = wasm_runtime_thread_env_inited();
-        juce::Logger::writeToLog("WasmDSP DIAG: Thread " + juce::String(threadIdHash) +
-            " - env_inited_before=" + juce::String(envInitedBefore ? "true" : "false") +
-            " - attempt=" + juce::String(threadInitAttempts));
+        SUNA_LOG("WasmDSP DIAG: Thread " + std::to_string(threadIdHash) +
+            " - env_inited_before=" + std::string(envInitedBefore ? "true" : "false") +
+            " - attempt=" + std::to_string(threadInitAttempts));
         
         if (!envInitedBefore) {
             bool initResult = wasm_runtime_init_thread_env();
             bool envInitedAfter = wasm_runtime_thread_env_inited();
             
-            juce::Logger::writeToLog("WasmDSP DIAG: Thread " + juce::String(threadIdHash) +
-                " - init_result=" + juce::String(initResult ? "true" : "false") +
-                " - env_inited_after=" + juce::String(envInitedAfter ? "true" : "false"));
+            SUNA_LOG("WasmDSP DIAG: Thread " + std::to_string(threadIdHash) +
+                " - init_result=" + std::string(initResult ? "true" : "false") +
+                " - env_inited_after=" + std::string(envInitedAfter ? "true" : "false"));
             
             if (!initResult) {
-                juce::Logger::writeToLog("WasmDSP DIAG: FATAL - init_thread_env returned false");
+                SUNA_LOG("WasmDSP DIAG: FATAL - init_thread_env returned false");
                 if (numSamples > 0) {
                     size_t copyBytes = static_cast<size_t>(numSamples) * sizeof(float);
                     std::memcpy(leftOut, leftIn, copyBytes);
@@ -266,7 +281,7 @@ void WasmDSP::processBlock(const float* leftIn, const float* rightIn,
                 // THIS IS THE KEY DIAGNOSTIC:
                 // If we reach here, init returned true but env_inited is still false.
                 // This confirms a TLS issue, symbol resolution problem, or library build issue.
-                juce::Logger::writeToLog("WasmDSP DIAG: ANOMALY - init=true but env_inited=false after init!");
+                SUNA_LOG("WasmDSP DIAG: ANOMALY - init=true but env_inited=false after init!");
             }
         }
         threadEnvInitialized = true;
@@ -277,9 +292,9 @@ void WasmDSP::processBlock(const float* leftIn, const float* rightIn,
     static bool passthroughLogged = false;
     if (!prepared_ || numSamples <= 0 || numSamples > maxBlockSize_) {
         if (!passthroughLogged) {
-            juce::Logger::writeToLog("WasmDSP::processBlock() - PASSTHROUGH MODE: prepared_=" +
-                juce::String(prepared_.load() ? "true" : "false") + ", numSamples=" + juce::String(numSamples) +
-                ", maxBlockSize_=" + juce::String(maxBlockSize_));
+            SUNA_LOG("WasmDSP::processBlock() - PASSTHROUGH MODE: prepared_=" +
+                std::string(prepared_.load() ? "true" : "false") + ", numSamples=" + std::to_string(numSamples) +
+                ", maxBlockSize_=" + std::to_string(maxBlockSize_));
             passthroughLogged = true;
         }
         if (numSamples > 0) {
@@ -307,14 +322,14 @@ void WasmDSP::processBlock(const float* leftIn, const float* rightIn,
     
     static bool wasmCallLogged = false;
     if (!wasmCallLogged) {
-        juce::Logger::writeToLog("WasmDSP::processBlock() - WASM call success=" + 
-            juce::String(success ? "true" : "false"));
+        SUNA_LOG("WasmDSP::processBlock() - WASM call success=" + 
+            std::string(success ? "true" : "false"));
         wasmCallLogged = true;
     }
     
     if (!success) {
         const char* exception = wasm_runtime_get_exception(moduleInst_);
-        juce::Logger::writeToLog("WASM call failed: " + juce::String(exception ? exception : "unknown error"));
+        SUNA_LOG(std::string("WASM call failed: ") + (exception ? exception : "unknown error"));
         
         std::memcpy(leftOut, leftIn, copyBytes);
         std::memcpy(rightOut, rightIn, copyBytes);
