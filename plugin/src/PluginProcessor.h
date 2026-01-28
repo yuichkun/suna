@@ -32,6 +32,7 @@ public:
     void setStateInformation(const void*, int) override;
 
     juce::AudioProcessorValueTreeState& getParameters() { return parameters_; }
+    suna::WasmDSP& getWasmDSP() { return wasmDSP_; }
 
 private:
     juce::AudioProcessorValueTreeState parameters_;
