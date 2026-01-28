@@ -315,7 +315,7 @@ pub fn process_sampler_stereo(left_in : Float, right_in : Float) -> (Float, Floa
       // Get current sample
       let pos = pos_ref.val
       if pos < length_ref.val {
-        mix_out = mix_out + buffer[pos]
+        mix_out = mix_out + buffer[pos] * get_slot_gain(slot)
         // Advance position
         pos_ref.val = pos + 1
       } else {

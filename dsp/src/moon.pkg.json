@@ -15,7 +15,9 @@
         "stop_all",
         "get_slot_length",
         "get_slot_playing",
-        "process_sampler_stereo"
+        "process_sampler_stereo",
+        "set_blend_x",
+        "set_blend_y"
       ],
       "heap-start-address": 65536,
       "export-memory-name": "memory"
