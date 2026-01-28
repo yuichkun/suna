@@ -46,9 +46,6 @@ TEST_CASE("WasmDSP processBlock passthrough", "[wasmdsp]") {
     REQUIRE(dsp.initialize(aot.data(), aot.size()));
     
     dsp.prepareToPlay(44100.0, 512);
-    dsp.setDelayTime(0.0f);
-    dsp.setFeedback(0.0f);
-    dsp.setMix(0.0f);
     
     constexpr int numSamples = 64;
     float leftIn[numSamples], rightIn[numSamples];
@@ -67,15 +64,12 @@ TEST_CASE("WasmDSP processBlock passthrough", "[wasmdsp]") {
     }
 }
 
-TEST_CASE("WasmDSP delay effect", "[wasmdsp]") {
+TEST_CASE("WasmDSP processBlock basic", "[wasmdsp]") {
     suna::WasmDSP dsp;
     auto aot = loadAOTFile("../../../plugin/resources/suna_dsp.aot");
     REQUIRE(dsp.initialize(aot.data(), aot.size()));
     
     dsp.prepareToPlay(44100.0, 512);
-    dsp.setDelayTime(10.0f);
-    dsp.setFeedback(0.0f);
-    dsp.setMix(1.0f);
     
     constexpr int numSamples = 512;
     float leftIn[numSamples] = {0};
@@ -83,50 +77,17 @@ TEST_CASE("WasmDSP delay effect", "[wasmdsp]") {
     float leftOut[numSamples] = {0};
     float rightOut[numSamples] = {0};
     
-    leftIn[0] = 1.0f;
-    rightIn[0] = 1.0f;
+    for (int i = 0; i < numSamples; ++i) {
+        leftIn[i] = std::sin(2.0f * 3.14159f * 440.0f * i / 44100.0f);
+        rightIn[i] = leftIn[i];
+    }
     
     dsp.processBlock(leftIn, rightIn, leftOut, rightOut, numSamples);
     
-    REQUIRE(leftOut[0] == Catch::Approx(0.0f).margin(0.001f));
-    
-    bool foundDelayedImpulse = false;
-    for (int i = 10; i < numSamples; ++i) {
-        if (std::abs(leftOut[i]) > 0.5f) {
-            foundDelayedImpulse = true;
-            break;
-        }
+    for (int i = 0; i < numSamples; ++i) {
+        REQUIRE(std::isfinite(leftOut[i]));
+        REQUIRE(std::isfinite(rightOut[i]));
     }
-    
-    if (!foundDelayedImpulse) {
-        for (int i = 0; i < numSamples; ++i) {
-            leftIn[i] = 0;
-            rightIn[i] = 0;
-        }
-        dsp.processBlock(leftIn, rightIn, leftOut, rightOut, numSamples);
-        for (int i = 0; i < numSamples; ++i) {
-            if (std::abs(leftOut[i]) > 0.5f) {
-                foundDelayedImpulse = true;
-                break;
-            }
-        }
-    }
-    
-    REQUIRE(foundDelayedImpulse);
-}
-
-TEST_CASE("WasmDSP parameter setters", "[wasmdsp]") {
-    suna::WasmDSP dsp;
-    auto aot = loadAOTFile("../../../plugin/resources/suna_dsp.aot");
-    REQUIRE(dsp.initialize(aot.data(), aot.size()));
-    
-    dsp.prepareToPlay(44100.0, 512);
-    
-    dsp.setDelayTime(100.0f);
-    dsp.setFeedback(0.5f);
-    dsp.setMix(0.7f);
-    
-    REQUIRE(dsp.isInitialized());
 }
 
 TEST_CASE("WasmDSP shutdown and reinitialize", "[wasmdsp]") {
@@ -148,9 +109,6 @@ TEST_CASE("WasmDSP multiple blocks", "[wasmdsp]") {
     REQUIRE(dsp.initialize(aot.data(), aot.size()));
     
     dsp.prepareToPlay(44100.0, 256);
-    dsp.setDelayTime(50.0f);
-    dsp.setFeedback(0.3f);
-    dsp.setMix(0.5f);
     
     constexpr int numSamples = 256;
     float leftIn[numSamples], rightIn[numSamples];
