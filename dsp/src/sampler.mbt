@@ -282,6 +282,24 @@ pub fn get_slot_playing(slot : Int) -> Int {
 }
 
 ///|
+/// Test helper: Set slot metadata for testing without Linear Memory
+/// Expands slots array dynamically as needed
+pub fn test_set_slot_data(slot : Int, length : Int) -> Unit {
+  // Expand array if needed
+  while slots.length() <= slot {
+    slots.push({ data_ptr: 0, length: 0, play_pos: 0, playing: 0 })
+  }
+  // Sync blend gains
+  ensure_gain_slot(slot)
+  
+  // Set test data (dummy data_ptr for tests)
+  slots[slot].data_ptr = 0
+  slots[slot].length = length
+  slots[slot].play_pos = 0
+  slots[slot].playing = 0
+}
+
+///|
 /// Process sampler and mix all playing samples
 /// Returns stereo output (mono sample duplicated to both channels)
 pub fn process_sampler_stereo(left_in : Float, right_in : Float) -> (Float, Float) {
