@@ -341,13 +341,19 @@ void WasmDSP::processBlock(const float* leftIn, const float* rightIn,
 }
 
 void WasmDSP::loadSample(int slot, const float* data, int length) {
-    if (!initialized_ || !nativeSampleData_) return;
+    if (!initialized_) return;
+
+    uint8_t* memBase = static_cast<uint8_t*>(
+        wasm_runtime_addr_app_to_native(moduleInst_, 0));
+    if (!memBase) return;
+
+    float* sampleData = reinterpret_cast<float*>(memBase + SAMPLE_DATA_START);
 
     constexpr int MAX_SAMPLES_PER_SLOT = 1440000;
     int copyLength = (length > MAX_SAMPLES_PER_SLOT) ? MAX_SAMPLES_PER_SLOT : length;
     
     uint32_t slotOffset = static_cast<uint32_t>(slot) * MAX_SAMPLES_PER_SLOT;
-    std::memcpy(nativeSampleData_ + slotOffset, data, static_cast<size_t>(copyLength) * sizeof(float));
+    std::memcpy(sampleData + slotOffset, data, static_cast<size_t>(copyLength) * sizeof(float));
 
     uint32_t dataPtr = SAMPLE_DATA_START + slotOffset * sizeof(float);
     wasm_val_t args[3] = {
