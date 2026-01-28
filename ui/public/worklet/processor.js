@@ -10,10 +10,17 @@ class SunaProcessor extends AudioWorkletProcessor {
     this.initialized = false;
 
     this.port.onmessage = (event) => {
-      if (event.data.type === 'init') {
+      const { type } = event.data;
+      if (type === 'init') {
         this.initWasm(event.data.wasmBytes);
-      } else if (event.data.type === 'param') {
-        this.updateParam(event.data.name, event.data.value);
+      } else if (type === 'loadSample') {
+        this.handleLoadSample(event.data.slot, event.data.pcmData, event.data.sampleRate);
+      } else if (type === 'clearSlot') {
+        this.handleClearSlot(event.data.slot);
+      } else if (type === 'playAll') {
+        this.handlePlayAll();
+      } else if (type === 'stopAll') {
+        this.handleStopAll();
       }
     };
   }
@@ -24,7 +31,7 @@ class SunaProcessor extends AudioWorkletProcessor {
       const instance = await WebAssembly.instantiate(wasmModule, {});
       this.wasm = instance.exports;
 
-      this.wasm.init_delay(sampleRate, 2000.0);
+      this.wasm.init_sampler(sampleRate);
 
       const BLOCK_SIZE = 128;
       const BYTES_PER_FLOAT = 4;
@@ -43,20 +50,36 @@ class SunaProcessor extends AudioWorkletProcessor {
     }
   }
 
-  updateParam(name, value) {
+  handleLoadSample(slot, pcmData, sampleRate) {
     if (!this.wasm) return;
 
-    switch (name) {
-      case 'delayTime':
-        this.wasm.set_delay_time(value);
-        break;
-      case 'feedback':
-        this.wasm.set_feedback(value / 100.0);
-        break;
-      case 'mix':
-        this.wasm.set_mix(value / 100.0);
-        break;
-    }
+    const SAMPLE_DATA_START = 1000000;
+    const MAX_SAMPLES_PER_SLOT = 480000;
+    const BYTES_PER_FLOAT = 4;
+    
+    const slotOffset = SAMPLE_DATA_START + (slot * MAX_SAMPLES_PER_SLOT * BYTES_PER_FLOAT);
+    const numSamples = Math.min(pcmData.length, MAX_SAMPLES_PER_SLOT);
+    
+    const memory = this.wasm.memory;
+    const sampleView = new Float32Array(memory.buffer, slotOffset, numSamples);
+    sampleView.set(pcmData.subarray(0, numSamples));
+    
+    this.wasm.load_sample(slot, slotOffset, numSamples, sampleRate);
+  }
+
+  handleClearSlot(slot) {
+    if (!this.wasm) return;
+    this.wasm.clear_slot(slot);
+  }
+
+  handlePlayAll() {
+    if (!this.wasm) return;
+    this.wasm.play_all();
+  }
+
+  handleStopAll() {
+    if (!this.wasm) return;
+    this.wasm.stop_all();
   }
 
   process(inputs, outputs) {

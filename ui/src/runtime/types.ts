@@ -22,32 +22,9 @@ export interface AudioRuntime {
   readonly type: 'juce' | 'web'
   getParameter(id: string): ParameterState | null
   setParameter(id: string, value: number): void
-  loadAudioFile?(file: File): Promise<void>
-  play?(): void
-  stop?(): void
-  getIsPlaying?(): boolean
-  hasAudioLoaded?(): boolean
   dispose?(): void
-}
-
-// Legacy interface for backward compatibility
-export interface Runtime {
-  initialize(): Promise<void>;
-  setDelayTime(ms: number): void;
-  setFeedback(percent: number): void;
-  setMix(percent: number): void;
-  destroy(): void;
-
-  // Optional methods for web mode file playback
-  loadAudioFile?(file: File): Promise<void>;
-  play?(): void;
-  stop?(): void;
-  getIsPlaying?(): boolean;
-  hasAudioLoaded?(): boolean;
-}
-
-export interface RuntimeParams {
-  delayTime: number;
-  feedback: number;
-  mix: number;
+  loadSample?(slot: number, pcmData: Float32Array, sampleRate: number): Promise<void>
+  clearSlot?(slot: number): void
+  playAll?(): void
+  stopAll?(): void
 }
