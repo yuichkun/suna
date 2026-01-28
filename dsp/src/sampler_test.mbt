@@ -108,6 +108,9 @@ test "test_play_only_loaded_slots" {
 ///|
 test "test_process_stereo" {
   let _ = init_sampler(48000.0)
+  // Set blend to point at slot 0 (up/north at maximum radius)
+  set_blend_x(0.0)
+  set_blend_y(1.0)
   
   // Set up slot 0 with test samples
   let buffer = get_sample_buffer(0)
@@ -122,20 +125,23 @@ test "test_process_stereo" {
   play_all()
   assert_eq(get_slot_playing(0), 1)
   
+  // Get the actual gain for slot 0 at this blend position
+  let gain = get_slot_gain(0)
+  
   // Process first sample
   let (left1, right1) = process_sampler_stereo(0.0, 0.0)
-  assert_true((left1 - 0.25).abs() < 0.001)
-  assert_true((right1 - 0.25).abs() < 0.001)
+  assert_true((left1 - 0.25 * gain).abs() < 0.001)
+  assert_true((right1 - 0.25 * gain).abs() < 0.001)
   
   // Process second sample
   let (left2, right2) = process_sampler_stereo(0.0, 0.0)
-  assert_true((left2 - 0.5).abs() < 0.001)
-  assert_true((right2 - 0.5).abs() < 0.001)
+  assert_true((left2 - 0.5 * gain).abs() < 0.001)
+  assert_true((right2 - 0.5 * gain).abs() < 0.001)
   
   // Process third sample
   let (left3, right3) = process_sampler_stereo(0.0, 0.0)
-  assert_true((left3 - 0.75).abs() < 0.001)
-  assert_true((right3 - 0.75).abs() < 0.001)
+  assert_true((left3 - 0.75 * gain).abs() < 0.001)
+  assert_true((right3 - 0.75 * gain).abs() < 0.001)
   
   // After third sample, playback should stop
   let (left4, right4) = process_sampler_stereo(0.0, 0.0)
@@ -147,6 +153,9 @@ test "test_process_stereo" {
 ///|
 test "test_process_stereo_with_input" {
   let _ = init_sampler(48000.0)
+  // Set blend to point at slot 0 (up/north at maximum radius)
+  set_blend_x(0.0)
+  set_blend_y(1.0)
   
   // Set up slot 0 with test sample
   let buffer = get_sample_buffer(0)
@@ -158,16 +167,22 @@ test "test_process_stereo_with_input" {
   // Start playback
   play_all()
   
+  // Get the actual gain for slot 0 at this blend position
+  let gain = get_slot_gain(0)
+  
   // Process with input signal
   let (left, right) = process_sampler_stereo(0.1, 0.2)
-  // Output should be input + sample
-  assert_true((left - 0.4).abs() < 0.001) // 0.1 + 0.3
-  assert_true((right - 0.5).abs() < 0.001) // 0.2 + 0.3
+  // Output should be input + sample * gain
+  assert_true((left - (0.1 + 0.3 * gain)).abs() < 0.001)
+  assert_true((right - (0.2 + 0.3 * gain)).abs() < 0.001)
 }
 
 ///|
 test "test_multiple_slots_mixing" {
   let _ = init_sampler(48000.0)
+  // Set blend to 45° (slot 1 direction) at r=1 - both slot 0 and 1 will have non-zero gains
+  set_blend_x(0.707)
+  set_blend_y(0.707)
   
   // Set up slot 0
   let buffer0 = get_sample_buffer(0)
@@ -184,11 +199,15 @@ test "test_multiple_slots_mixing" {
   // Start playback
   play_all()
   
-  // Process - should mix both slots
+  // Get actual gains at this blend position
+  let gain0 = get_slot_gain(0)
+  let gain1 = get_slot_gain(1)
+  let expected = 0.2 * gain0 + 0.3 * gain1
+  
+  // Process - should mix both slots with their respective gains
   let (left, right) = process_sampler_stereo(0.0, 0.0)
-  // Output should be sum of both samples
-  assert_true((left - 0.5).abs() < 0.001) // 0.2 + 0.3
-  assert_true((right - 0.5).abs() < 0.001)
+  assert_true((left - expected).abs() < 0.001)
+  assert_true((right - expected).abs() < 0.001)
 }
 
 ///|
