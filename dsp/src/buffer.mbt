@@ -1,5 +1,6 @@
 // Stereo buffer processing for WASM linear memory access
 // Enables efficient block processing from C++ (JUCE) and JavaScript (AudioWorklet)
+// Calls sampler for audio processing
 
 ///|
 /// Load a 32-bit float from linear memory at given byte offset
@@ -12,8 +13,8 @@ extern "wasm" fn store_f32(ptr : Int, value : Float) =
   #|(func (param i32 f32) (f32.store (local.get 0) (local.get 1)))
 
 ///|
-/// Process stereo audio block through delay
-/// Reads from WASM linear memory at input pointers, processes through delay,
+/// Process stereo audio block through sampler
+/// Reads from WASM linear memory at input pointers, processes through sampler,
 /// and writes to output pointers. Supports in-place processing (in_ptr == out_ptr).
 /// 
 /// Parameters:
@@ -49,9 +50,8 @@ pub fn process_block(
     let left_in = load_f32(left_in_ptr + byte_offset)
     let right_in = load_f32(right_in_ptr + byte_offset)
 
-    // Process through delay (mono-sum stereo, Kodama pattern)
-    // This advances write_pos ONCE per stereo pair (not twice!)
-    let (left_out, right_out) = process_stereo(left_in, right_in)
+    // Process through sampler (mixes all playing samples with input)
+    let (left_out, right_out) = process_sampler_stereo(left_in, right_in)
 
     // Write output samples to linear memory
     store_f32(left_out_ptr + byte_offset, left_out)
