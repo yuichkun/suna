@@ -216,56 +216,43 @@ pub fn init_sampler(sr : Float) -> Int {
 /// Load sample data from linear memory into a slot
 /// data_ptr: byte offset in linear memory where sample data starts
 /// length: number of samples to load
-/// Returns 0 on success, -1 on invalid slot, -2 on length exceeds max
+/// Returns 0 on success, -1 on invalid slot, -2 on invalid length
 pub fn load_sample(slot : Int, data_ptr : Int, length : Int) -> Int {
   // Validate slot
-  if slot < 0 || slot >= MAX_SAMPLES {
+  if slot < 0 {
     return -1
   }
   // Validate length
-  if length <= 0 || length > MAX_SAMPLE_LENGTH {
+  if length <= 0 {
     return -2
   }
-  let buffer = get_sample_buffer(slot)
-  let length_ref = get_sample_length(slot)
-  let pos_ref = get_play_pos(slot)
-  let playing_ref = get_playing(slot)
-  // Stop playback while loading
-  playing_ref.val = 0
-  pos_ref.val = 0
-  // Copy sample data from linear memory (4 bytes per Float32)
-  for i = 0; i < length; i = i + 1 {
-    let byte_offset = i * 4
-    buffer[i] = sampler_load_f32(data_ptr + byte_offset)
+  // Expand slots array as needed
+  while slots.length() <= slot {
+    slots.push({ data_ptr: 0, length: 0, play_pos: 0, playing: 0 })
   }
-  // Clear remaining buffer
-  for i = length; i < MAX_SAMPLE_LENGTH; i = i + 1 {
-    buffer[i] = 0.0
-  }
-  length_ref.val = length
+  // Sync blend gains array
+  ensure_gain_slot(slot)
+  // Record pointer and length only - NO DATA COPY
+  slots[slot].data_ptr = data_ptr
+  slots[slot].length = length
+  slots[slot].play_pos = 0
+  slots[slot].playing = 0
   0 // success
 }
 
 ///|
-/// Clear a slot's buffer and stop playback
-/// Returns 0 on success, -1 on invalid slot
+/// Clear a slot's metadata and stop playback
+/// Returns 0 on success (even if slot out of bounds)
 pub fn clear_slot(slot : Int) -> Int {
-  // Validate slot
-  if slot < 0 || slot >= MAX_SAMPLES {
-    return -1
+  // Range-safe: return 0 even if out of bounds
+  if slot < 0 || slot >= slots.length() {
+    return 0
   }
-  let buffer = get_sample_buffer(slot)
-  let length_ref = get_sample_length(slot)
-  let pos_ref = get_play_pos(slot)
-  let playing_ref = get_playing(slot)
-  // Stop playback
-  playing_ref.val = 0
-  pos_ref.val = 0
-  length_ref.val = 0
-  // Clear buffer
-  for i = 0; i < MAX_SAMPLE_LENGTH; i = i + 1 {
-    buffer[i] = 0.0
-  }
+  // Reset slot metadata
+  slots[slot].data_ptr = 0
+  slots[slot].length = 0
+  slots[slot].play_pos = 0
+  slots[slot].playing = 0
   0 // success
 }
 
@@ -295,23 +282,21 @@ pub fn stop_all() -> Unit {
 }
 
 ///|
-/// Get sample length for a slot (0 if empty)
-/// Returns -1 on invalid slot
+/// Get sample length for a slot (0 if empty or out of bounds)
 pub fn get_slot_length(slot : Int) -> Int {
-  if slot < 0 || slot >= MAX_SAMPLES {
-    return -1
+  if slot < 0 || slot >= slots.length() {
+    return 0
   }
-  get_sample_length(slot).val
+  slots[slot].length
 }
 
 ///|
-/// Get playing state for a slot (0 = stopped, 1 = playing)
-/// Returns -1 on invalid slot
+/// Get playing state for a slot (0 = stopped, 1 = playing, 0 if out of bounds)
 pub fn get_slot_playing(slot : Int) -> Int {
-  if slot < 0 || slot >= MAX_SAMPLES {
-    return -1
+  if slot < 0 || slot >= slots.length() {
+    return 0
   }
-  get_playing(slot).val
+  slots[slot].playing
 }
 
 ///|
