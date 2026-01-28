@@ -17,10 +17,6 @@ SunaAudioProcessor::SunaAudioProcessor()
     juce::Logger::writeToLog("SunaAudioProcessor: Constructor started at " + 
         juce::Time::getCurrentTime().toString(true, true, true, true));
     
-    delayTimeParam_ = parameters_.getRawParameterValue("delayTime");
-    feedbackParam_ = parameters_.getRawParameterValue("feedback");
-    mixParam_ = parameters_.getRawParameterValue("mix");
-    
     dspInitialized_ = wasmDSP_.initialize(
         reinterpret_cast<const uint8_t*>(SunaBinaryData::suna_dsp_aot),
         SunaBinaryData::suna_dsp_aotSize
@@ -72,14 +68,6 @@ void SunaAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         return;
     }
 
-    float delayTime = delayTimeParam_->load();
-    float feedback = feedbackParam_->load() / 100.0f;
-    float mix = mixParam_->load() / 100.0f;
-
-    wasmDSP_.setDelayTime(delayTime);
-    wasmDSP_.setFeedback(feedback);
-    wasmDSP_.setMix(mix);
-
     auto* leftChannel = buffer.getWritePointer(0);
     auto* rightChannel = buffer.getNumChannels() > 1 
                          ? buffer.getWritePointer(1) 
@@ -115,37 +103,6 @@ void SunaAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 juce::AudioProcessorValueTreeState::ParameterLayout 
 SunaAudioProcessor::createParameterLayout() {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
-    
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        "delayTime",
-        "Delay Time",
-        juce::NormalisableRange<float>(0.0f, 2000.0f, 1.0f),
-        300.0f,
-        juce::String(),
-        juce::AudioProcessorParameter::genericParameter,
-        [](float value, int) { return juce::String(value, 1) + " ms"; }
-    ));
-    
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        "feedback",
-        "Feedback",
-        juce::NormalisableRange<float>(0.0f, 100.0f, 0.1f),
-        30.0f,
-        juce::String(),
-        juce::AudioProcessorParameter::genericParameter,
-        [](float value, int) { return juce::String(value, 1) + " %"; }
-    ));
-    
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        "mix",
-        "Mix",
-        juce::NormalisableRange<float>(0.0f, 100.0f, 0.1f),
-        50.0f,
-        juce::String(),
-        juce::AudioProcessorParameter::genericParameter,
-        [](float value, int) { return juce::String(value, 1) + " %"; }
-    ));
-    
     return { params.begin(), params.end() };
 }
 

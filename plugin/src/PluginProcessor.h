@@ -36,11 +36,6 @@ public:
 private:
     juce::AudioProcessorValueTreeState parameters_;
     
-    // Atomic parameter pointers (for fast access in processBlock)
-    std::atomic<float>* delayTimeParam_ = nullptr;
-    std::atomic<float>* feedbackParam_ = nullptr;
-    std::atomic<float>* mixParam_ = nullptr;
-    
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     
     suna::WasmDSP wasmDSP_;
