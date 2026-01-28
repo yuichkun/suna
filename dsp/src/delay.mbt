@@ -150,12 +150,9 @@ pub fn process_stereo(left_in : Float, right_in : Float) -> (Float, Float) {
   // Process through delay ONCE (single buffer advance per stereo pair)
   let wet = process_sample_wet(mono_in)
 
-  // DEBUG: Add 220Hz sine wave to wet signal for DSP verification
-  let wet_with_sine = wet + generate_sine()
-
   // Apply dry/wet mix to both channels (sine only affects wet signal)
-  let left_out = left_in * (1.0 - mix.val) + wet_with_sine * mix.val
-  let right_out = right_in * (1.0 - mix.val) + wet_with_sine * mix.val
+  let left_out = left_in * (1.0 - mix.val) + wet * mix.val
+  let right_out = right_in * (1.0 - mix.val) + wet * mix.val
   (left_out, right_out)
 }
 
