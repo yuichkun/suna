@@ -8,38 +8,9 @@ const PI : Float = 3.14159265358979323846
 ///|
 const TWO_PI : Float = 6.28318530717958647692
 
-// Slot angles in radians (clockwise from top/north)
-// Slot 0: 90° (up/north) = PI/2
-// Slot 1: 45° (northeast) = PI/4
-// Slot 2: 0° (right/east) = 0
-// Slot 3: 315° (southeast) = -PI/4
-// Slot 4: 270° (down/south) = -PI/2
-// Slot 5: 225° (southwest) = -3*PI/4
-// Slot 6: 180° (left/west) = PI
-// Slot 7: 135° (northwest) = 3*PI/4
-///|
-const SLOT_ANGLE_0 : Float = 1.5707963267948966 // PI/2
-
-///|
-const SLOT_ANGLE_1 : Float = 0.7853981633974483 // PI/4
-
-///|
-const SLOT_ANGLE_2 : Float = 0.0 // 0
-
-///|
-const SLOT_ANGLE_3 : Float = -0.7853981633974483 // -PI/4
-
-///|
-const SLOT_ANGLE_4 : Float = -1.5707963267948966 // -PI/2
-
-///|
-const SLOT_ANGLE_5 : Float = -2.356194490192345 // -3*PI/4
-
-///|
-const SLOT_ANGLE_6 : Float = 3.14159265358979323846 // PI
-
-///|
-const SLOT_ANGLE_7 : Float = 2.356194490192345 // 3*PI/4
+// Slot angles calculated dynamically based on number of slots
+// Formula: angle = PI/2 - slot * (2π / N)
+// This ensures even distribution around the circle with slot 0 at top (PI/2)
 
 // Global blend state (X/Y stick position, range -1.0 to 1.0)
 ///|
@@ -48,30 +19,9 @@ let blend_x : Ref[Float] = { val: 0.0 }
 ///|
 let blend_y : Ref[Float] = { val: 0.0 }
 
-// Per-slot gain values (initialized to equal distribution 1/8)
+// Per-slot gain values (dynamic array, expanded as needed)
 ///|
-let gain_0 : Ref[Float] = { val: 0.125 }
-
-///|
-let gain_1 : Ref[Float] = { val: 0.125 }
-
-///|
-let gain_2 : Ref[Float] = { val: 0.125 }
-
-///|
-let gain_3 : Ref[Float] = { val: 0.125 }
-
-///|
-let gain_4 : Ref[Float] = { val: 0.125 }
-
-///|
-let gain_5 : Ref[Float] = { val: 0.125 }
-
-///|
-let gain_6 : Ref[Float] = { val: 0.125 }
-
-///|
-let gain_7 : Ref[Float] = { val: 0.125 }
+let gains : Array[Ref[Float]] = []
 
 // WASM intrinsic for sqrt
 ///|
@@ -200,14 +150,25 @@ fn cos_approx(x : Float) -> Float {
   }
 }
 
+// Calculate slot angle dynamically based on slot index and total slots
+// Formula: angle = PI/2 - slot * (2π / N)
+// Slot 0 starts at top (PI/2), clockwise placement
+///|
+fn get_slot_angle(slot : Int, total_slots : Int) -> Float {
+  if total_slots <= 0 {
+    return 0.0
+  }
+  let angle_step = TWO_PI / total_slots.to_float()
+  PI / 2.0 - slot.to_float() * angle_step
+}
+
 // Ensure gain slot exists for dynamic slot expansion
-// Stub: Task 6 will replace with gains: Array[Ref[Float]] implementation
-// Currently, existing gain_0..7 variables handle all slots (Host ensures slot < 8)
+// Expands gains array if slot >= current length
 ///|
 pub fn ensure_gain_slot(slot : Int) -> Unit {
-  // Task 6: Will expand gains array if slot >= current length
-  // For now, no-op (existing static gains handle all valid slots)
-  ()
+  while gains.length() <= slot {
+    gains.push({ val: 0.0 })
+  }
 }
 
 // Recalculate all gains based on current blend_x/blend_y
@@ -218,83 +179,34 @@ fn recalculate_gains() -> Unit {
   // Calculate stick radius (clamped to 0..1)
   let r_raw = sqrt_f32(x * x + y * y)
   let r = clamp_f32(r_raw, 0.0, 1.0)
-  // If at center, silence (all gains zero)
-  if r < 0.001 {
-    gain_0.val = 0.0
-    gain_1.val = 0.0
-    gain_2.val = 0.0
-    gain_3.val = 0.0
-    gain_4.val = 0.0
-    gain_5.val = 0.0
-    gain_6.val = 0.0
-    gain_7.val = 0.0
+  
+  // If at center or no slots, silence (all gains zero)
+  if r < 0.001 || gains.length() == 0 {
+    for i = 0; i < gains.length(); i = i + 1 {
+      gains[i].val = 0.0
+    }
     return
   }
+  
   // Calculate stick angle
   let theta = atan2_approx(y, x)
-  // Calculate raw weights for each slot
-  let mut raw_0 : Float = 0.0
-  let mut raw_1 : Float = 0.0
-  let mut raw_2 : Float = 0.0
-  let mut raw_3 : Float = 0.0
-  let mut raw_4 : Float = 0.0
-  let mut raw_5 : Float = 0.0
-  let mut raw_6 : Float = 0.0
-  let mut raw_7 : Float = 0.0
-  // Slot 0
-  let angle_diff_0 = abs_f32(normalize_angle(theta - SLOT_ANGLE_0))
-  raw_0 = max_f32(0.0, cos_approx(angle_diff_0 / 2.0))
-  // Slot 1
-  let angle_diff_1 = abs_f32(normalize_angle(theta - SLOT_ANGLE_1))
-  raw_1 = max_f32(0.0, cos_approx(angle_diff_1 / 2.0))
-  // Slot 2
-  let angle_diff_2 = abs_f32(normalize_angle(theta - SLOT_ANGLE_2))
-  raw_2 = max_f32(0.0, cos_approx(angle_diff_2 / 2.0))
-  // Slot 3
-  let angle_diff_3 = abs_f32(normalize_angle(theta - SLOT_ANGLE_3))
-  raw_3 = max_f32(0.0, cos_approx(angle_diff_3 / 2.0))
-  // Slot 4
-  let angle_diff_4 = abs_f32(normalize_angle(theta - SLOT_ANGLE_4))
-  raw_4 = max_f32(0.0, cos_approx(angle_diff_4 / 2.0))
-  // Slot 5
-  let angle_diff_5 = abs_f32(normalize_angle(theta - SLOT_ANGLE_5))
-  raw_5 = max_f32(0.0, cos_approx(angle_diff_5 / 2.0))
-  // Slot 6
-  let angle_diff_6 = abs_f32(normalize_angle(theta - SLOT_ANGLE_6))
-  raw_6 = max_f32(0.0, cos_approx(angle_diff_6 / 2.0))
-  // Slot 7
-  let angle_diff_7 = abs_f32(normalize_angle(theta - SLOT_ANGLE_7))
-  raw_7 = max_f32(0.0, cos_approx(angle_diff_7 / 2.0))
-  // Normalize weights
-  let total = raw_0 + raw_1 + raw_2 + raw_3 + raw_4 + raw_5 + raw_6 + raw_7
+  let n = gains.length()
+  
+  // Calculate weights for each slot
+  let mut total : Float = 0.0
+  for slot = 0; slot < n; slot = slot + 1 {
+    let slot_angle = get_slot_angle(slot, n)
+    let angle_diff = abs_f32(normalize_angle(theta - slot_angle))
+    let raw = max_f32(0.0, cos_approx(angle_diff / 2.0))
+    gains[slot].val = raw
+    total = total + raw
+  }
+  
+  // Normalize and apply radius
   if total > 0.0 {
-    let norm_0 = raw_0 / total
-    let norm_1 = raw_1 / total
-    let norm_2 = raw_2 / total
-    let norm_3 = raw_3 / total
-    let norm_4 = raw_4 / total
-    let norm_5 = raw_5 / total
-    let norm_6 = raw_6 / total
-    let norm_7 = raw_7 / total
-    // Simple: gain = radius * directional_weight (center = silent)
-    gain_0.val = r * norm_0
-    gain_1.val = r * norm_1
-    gain_2.val = r * norm_2
-    gain_3.val = r * norm_3
-    gain_4.val = r * norm_4
-    gain_5.val = r * norm_5
-    gain_6.val = r * norm_6
-    gain_7.val = r * norm_7
-  } else {
-    // Fallback to silence
-    gain_0.val = 0.0
-    gain_1.val = 0.0
-    gain_2.val = 0.0
-    gain_3.val = 0.0
-    gain_4.val = 0.0
-    gain_5.val = 0.0
-    gain_6.val = 0.0
-    gain_7.val = 0.0
+    for slot = 0; slot < n; slot = slot + 1 {
+      gains[slot].val = r * gains[slot].val / total
+    }
   }
 }
 
@@ -315,14 +227,8 @@ pub fn set_blend_y(y : Float) -> Unit {
 // Public API: Get gain for a specific slot
 ///|
 pub fn get_slot_gain(slot : Int) -> Float {
-  match slot {
-    0 => gain_0.val
-    1 => gain_1.val
-    2 => gain_2.val
-    3 => gain_3.val
-    4 => gain_4.val
-    5 => gain_5.val
-    6 => gain_6.val
-    _ => gain_7.val
+  if slot < 0 || slot >= gains.length() {
+    return 0.0
   }
+  gains[slot].val
 }
