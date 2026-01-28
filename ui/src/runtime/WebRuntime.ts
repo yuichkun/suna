@@ -50,6 +50,7 @@ export class WebRuntime implements AudioRuntime {
   }
 
   playAll(): void {
+    this.audioContext?.resume();
     this.workletNode?.port.postMessage({ type: 'playAll' });
   }
 
