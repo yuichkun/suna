@@ -191,24 +191,11 @@ extern "wasm" fn sampler_load_f32(ptr : Int) -> Float =
 
 ///|
 /// Initialize sampler with given sample rate
-/// Clears all buffers and resets state
+/// Clears all slots and resets state
 /// Returns 0 on success
 pub fn init_sampler(sr : Float) -> Int {
   sampler_sample_rate.val = sr
-  // Clear all slots
-  for slot = 0; slot < MAX_SAMPLES; slot = slot + 1 {
-    let buffer = get_sample_buffer(slot)
-    let length_ref = get_sample_length(slot)
-    let pos_ref = get_play_pos(slot)
-    let playing_ref = get_playing(slot)
-    // Clear buffer
-    for i = 0; i < MAX_SAMPLE_LENGTH; i = i + 1 {
-      buffer[i] = 0.0
-    }
-    length_ref.val = 0
-    pos_ref.val = 0
-    playing_ref.val = 0
-  }
+  slots.clear()
   0 // success
 }
 
@@ -260,14 +247,10 @@ pub fn clear_slot(slot : Int) -> Int {
 /// Start playback for all loaded slots (length > 0)
 /// Resets play position to beginning
 pub fn play_all() -> Unit {
-  for slot = 0; slot < MAX_SAMPLES; slot = slot + 1 {
-    let length_ref = get_sample_length(slot)
-    let pos_ref = get_play_pos(slot)
-    let playing_ref = get_playing(slot)
-    // Only play slots that have samples loaded
-    if length_ref.val > 0 {
-      pos_ref.val = 0
-      playing_ref.val = 1
+  for slot = 0; slot < slots.length(); slot = slot + 1 {
+    if slots[slot].length > 0 {
+      slots[slot].play_pos = 0
+      slots[slot].playing = 1
     }
   }
 }
@@ -275,9 +258,8 @@ pub fn play_all() -> Unit {
 ///|
 /// Stop all playback
 pub fn stop_all() -> Unit {
-  for slot = 0; slot < MAX_SAMPLES; slot = slot + 1 {
-    let playing_ref = get_playing(slot)
-    playing_ref.val = 0
+  for slot = 0; slot < slots.length(); slot = slot + 1 {
+    slots[slot].playing = 0
   }
 }
 
@@ -305,22 +287,19 @@ pub fn get_slot_playing(slot : Int) -> Int {
 pub fn process_sampler_stereo(left_in : Float, right_in : Float) -> (Float, Float) {
   let mut mix_out : Float = 0.0
   // Process each slot
-  for slot = 0; slot < MAX_SAMPLES; slot = slot + 1 {
-    let buffer = get_sample_buffer(slot)
-    let length_ref = get_sample_length(slot)
-    let pos_ref = get_play_pos(slot)
-    let playing_ref = get_playing(slot)
+  for slot = 0; slot < slots.length(); slot = slot + 1 {
+    let meta = slots[slot]
     // Only process playing slots
-    if playing_ref.val == 1 && length_ref.val > 0 {
-      // Get current sample
-      let pos = pos_ref.val
-      if pos < length_ref.val {
-        mix_out = mix_out + buffer[pos] * get_slot_gain(slot)
+    if meta.playing == 1 && meta.length > 0 {
+      // Get current sample from linear memory
+      if meta.play_pos < meta.length {
+        let sample = sampler_load_f32(meta.data_ptr + meta.play_pos * 4)
+        mix_out = mix_out + sample * get_slot_gain(slot)
         // Advance position
-        pos_ref.val = pos + 1
+        slots[slot].play_pos = meta.play_pos + 1
       } else {
         // Reached end of sample, stop playback
-        playing_ref.val = 0
+        slots[slot].playing = 0
       }
     }
   }
