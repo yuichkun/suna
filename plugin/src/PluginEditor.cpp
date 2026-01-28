@@ -9,33 +9,65 @@ SunaAudioProcessorEditor::SunaAudioProcessorEditor(SunaAudioProcessor& p)
 {
     juce::Logger::writeToLog("SunaAudioProcessorEditor: Constructor started");
     
-    delayTimeRelay = std::make_unique<juce::WebSliderRelay>("delayTime");
-    feedbackRelay = std::make_unique<juce::WebSliderRelay>("feedback");
-    mixRelay = std::make_unique<juce::WebSliderRelay>("mix");
-    
     browser = std::make_unique<juce::WebBrowserComponent>(
         juce::WebBrowserComponent::Options{}
             .withNativeIntegrationEnabled()
             .withResourceProvider([this](const auto& url) { return getResource(url); })
             .withKeepPageLoadedWhenBrowserIsHidden()
-            .withOptionsFrom(*delayTimeRelay)
-            .withOptionsFrom(*feedbackRelay)
-            .withOptionsFrom(*mixRelay));
-    
-    delayTimeAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
-        *audioProcessor.getParameters().getParameter("delayTime"),
-        *delayTimeRelay,
-        nullptr);
-    
-    feedbackAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
-        *audioProcessor.getParameters().getParameter("feedback"),
-        *feedbackRelay,
-        nullptr);
-    
-    mixAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
-        *audioProcessor.getParameters().getParameter("mix"),
-        *mixRelay,
-        nullptr);
+            .withNativeFunction("loadSample", [this](const auto& params, auto complete) {
+                // Expected params from JS: [slot, base64PCM, sampleRate]
+                if (params.size() < 3)
+                {
+                    complete({});
+                    return;
+                }
+                
+                int slot = static_cast<int>(params[0]);
+                juce::String base64PCM = params[1].toString();
+                double sampleRate = static_cast<double>(params[2]);
+                
+                juce::MemoryOutputStream decoded;
+                if (!juce::Base64::convertFromBase64(decoded, base64PCM))
+                {
+                    juce::Logger::writeToLog("loadSample: Base64 decode failed");
+                    complete({});
+                    return;
+                }
+                
+                // Convert to float array (assuming 32-bit float PCM)
+                const float* floatData = reinterpret_cast<const float*>(decoded.getData());
+                size_t numSamples = decoded.getDataSize() / sizeof(float);
+                
+                audioProcessor.getWasmDSP().loadSample(slot, floatData, numSamples);
+                
+                juce::Logger::writeToLog("loadSample: Loaded " + juce::String(numSamples) + 
+                                         " samples into slot " + juce::String(slot));
+                complete(juce::var(true));
+            })
+            .withNativeFunction("clearSlot", [this](const auto& params, auto complete) {
+                // Expected params from JS: [slot]
+                if (params.size() < 1)
+                {
+                    complete({});
+                    return;
+                }
+                
+                int slot = static_cast<int>(params[0]);
+                audioProcessor.getWasmDSP().clearSlot(slot);
+                
+                juce::Logger::writeToLog("clearSlot: Cleared slot " + juce::String(slot));
+                complete(juce::var(true));
+            })
+            .withNativeFunction("playAll", [this](const auto& params, auto complete) {
+                audioProcessor.getWasmDSP().playAll();
+                juce::Logger::writeToLog("playAll: Triggered");
+                complete(juce::var(true));
+            })
+            .withNativeFunction("stopAll", [this](const auto& params, auto complete) {
+                audioProcessor.getWasmDSP().stopAll();
+                juce::Logger::writeToLog("stopAll: Triggered");
+                complete(juce::var(true));
+            }));
     
     addAndMakeVisible(*browser);
     
@@ -54,13 +86,7 @@ SunaAudioProcessorEditor::SunaAudioProcessorEditor(SunaAudioProcessor& p)
 SunaAudioProcessorEditor::~SunaAudioProcessorEditor()
 {
     juce::Logger::writeToLog("~SunaAudioProcessorEditor: Destructor started");
-    
-    // Destroy browser first (while relays are still valid)
     browser.reset();
-    
-    juce::Logger::writeToLog("~SunaAudioProcessorEditor: browser reset complete");
-    
-    // Relays and attachments will auto-destruct after this
     juce::Logger::writeToLog("~SunaAudioProcessorEditor: Destructor complete");
 }
 
