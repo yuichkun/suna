@@ -185,7 +185,6 @@ function getSlotData(index: number) {
   display: flex;
   flex-direction: column;
   padding: 28px 20px;
-  max-width: 400px;
   margin: 0 auto;
   font-family: 'IBM Plex Mono', 'Fira Code', 'SF Mono', monospace;
 }
@@ -221,6 +220,8 @@ function getSlotData(index: number) {
 
 .sampler-container {
   display: flex;
+  width: 400px;
+  margin: 0 auto;
   flex-direction: column;
   gap: 16px;
   flex: 1;
