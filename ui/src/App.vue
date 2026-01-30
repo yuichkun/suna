@@ -15,9 +15,9 @@ watch([rightStickX, rightStickY], ([x, y]) => {
   runtime.value?.setBlendY?.(y)
 })
 
-// Left stick X -> playback speed (-1..1 maps to -2..2)
+// Left stick X -> playback speed: center=1x, right=2x, left=-2x
 watch(leftStickX, (x) => {
-  const speed = x * 2
+  const speed = x >= 0 ? 1 + x : 1 + 3 * x
   runtime.value?.setPlaybackSpeed?.(speed)
 })
 
