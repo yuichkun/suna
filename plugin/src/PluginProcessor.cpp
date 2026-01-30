@@ -16,6 +16,14 @@ SunaAudioProcessor::SunaAudioProcessor()
     juce::Logger::writeToLog("SunaAudioProcessor: Constructor started at " + 
         juce::Time::getCurrentTime().toString(true, true, true, true));
     
+    // Cache raw parameter pointers for efficient processBlock access
+    blendXParam_ = parameters_.getRawParameterValue("blendX");
+    blendYParam_ = parameters_.getRawParameterValue("blendY");
+    playbackSpeedParam_ = parameters_.getRawParameterValue("playbackSpeed");
+    grainLengthParam_ = parameters_.getRawParameterValue("grainLength");
+    grainDensityParam_ = parameters_.getRawParameterValue("grainDensity");
+    freezeParam_ = parameters_.getRawParameterValue("freeze");
+    
     dspInitialized_ = wasmDSP_.initialize(
         reinterpret_cast<const uint8_t*>(SunaBinaryData::suna_dsp_aot),
         SunaBinaryData::suna_dsp_aotSize
@@ -61,6 +69,14 @@ void SunaAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         return;
     }
 
+    // Read all parameters and update DSP
+    wasmDSP_.setBlendX(blendXParam_->load());
+    wasmDSP_.setBlendY(blendYParam_->load());
+    wasmDSP_.setPlaybackSpeed(playbackSpeedParam_->load());
+    wasmDSP_.setGrainLength(static_cast<int>(grainLengthParam_->load()));
+    wasmDSP_.setGrainDensity(grainDensityParam_->load());
+    wasmDSP_.setFreeze(freezeParam_->load() > 0.5f ? 1 : 0);
+
     // Clear buffer since we have no input bus
     buffer.clear();
 
@@ -104,6 +120,14 @@ SunaAudioProcessor::createParameterLayout() {
         "blendX", "Blend X", -1.0f, 1.0f, 0.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         "blendY", "Blend Y", -1.0f, 1.0f, 0.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "playbackSpeed", "Playback Speed", -2.0f, 2.0f, 1.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "grainLength", "Grain Length", 100.0f, 44100.0f, 4224.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "grainDensity", "Grain Density", 0.0f, 1.0f, 0.0f));
+    params.push_back(std::make_unique<juce::AudioParameterBool>(
+        "freeze", "Freeze", false));
     
     return { params.begin(), params.end() };
 }

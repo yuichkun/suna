@@ -39,6 +39,14 @@ private:
     
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     
+    // Raw parameter pointers for efficient processBlock access
+    std::atomic<float>* blendXParam_ = nullptr;
+    std::atomic<float>* blendYParam_ = nullptr;
+    std::atomic<float>* playbackSpeedParam_ = nullptr;
+    std::atomic<float>* grainLengthParam_ = nullptr;
+    std::atomic<float>* grainDensityParam_ = nullptr;
+    std::atomic<float>* freezeParam_ = nullptr;
+    
     suna::WasmDSP wasmDSP_;
     bool dspInitialized_ = false;
     
