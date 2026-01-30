@@ -7,7 +7,7 @@ import XYPadDisplay from './components/XYPadDisplay.vue'
 
 const { runtime, isWeb, isInitialized, initError } = useRuntime()
 const { loadedBuffers, isPlaying, loadSample, clearSlot, getNextAvailableSlot, play, stop, MAX_SAMPLES } = useSampler()
-const { isConnected, leftStickX, leftStickY, rightStickX, rightStickY } = useGamepad()
+const { isConnected, leftStickX, leftStickY, rightStickX, rightStickY, grainLength } = useGamepad()
 
 // Right stick -> blend control
 watch([rightStickX, rightStickY], ([x, y]) => {
@@ -130,16 +130,17 @@ function getSlotData(index: number) {
         </div>
 
         <!-- Controls Row: XYPads + Playback -->
-        <div class="controls-row">
-          <!-- Left Stick: Speed Control -->
-          <div class="pad-group">
-            <span class="pad-label">SPEED</span>
-            <XYPadDisplay
-              :x="leftStickX"
-              :y="leftStickY"
-              :is-connected="isConnected"
-            />
-          </div>
+         <div class="controls-row">
+           <!-- Left Stick: Speed Control -->
+           <div class="pad-group">
+             <span class="pad-label">SPEED</span>
+             <XYPadDisplay
+               :x="leftStickX"
+               :y="leftStickY"
+               :is-connected="isConnected"
+             />
+             <span class="pad-value">{{ grainLength }} samples</span>
+           </div>
 
           <!-- Right Stick: Blend Control -->
           <div class="pad-group">
@@ -428,6 +429,13 @@ function getSlotData(index: number) {
   letter-spacing: 0.15em;
   color: var(--text-muted);
   text-transform: uppercase;
+}
+
+.pad-value {
+  font-size: 8px;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  margin-top: 4px;
 }
 
 /* Playback Controls */

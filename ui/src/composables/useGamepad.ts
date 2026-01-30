@@ -1,5 +1,6 @@
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import type { Ref } from 'vue'
+import { useRuntime } from './useRuntime'
 
 // Module-level reactive state (singleton pattern)
 const isConnected: Ref<boolean> = ref(false)
@@ -8,6 +9,7 @@ const leftStickY: Ref<number> = ref(0)
 const rightStickX: Ref<number> = ref(0)
 const rightStickY: Ref<number> = ref(0)
 const gamepadId: Ref<string | null> = ref(null)
+const grainLength: Ref<number> = ref(4224)
 
 // Non-reactive state for RAF management
 let animationFrameId: number | null = null
@@ -68,6 +70,8 @@ function onGamepadDisconnected(event: GamepadEvent): void {
 }
 
 export function useGamepad() {
+  const { runtime } = useRuntime()
+
   onMounted(() => {
     window.addEventListener('gamepadconnected', onGamepadConnected)
     window.addEventListener('gamepaddisconnected', onGamepadDisconnected)
@@ -91,6 +95,13 @@ export function useGamepad() {
     stopPolling()
   })
 
+  // Map left stick Y to grain length: -1 (down) to +1 (up) -> 256 to 8192 samples
+  watch(leftStickY, (y) => {
+    const length = 256 + Math.floor((y + 1) * 3968)
+    grainLength.value = length
+    runtime.value?.setGrainLength?.(length)
+  })
+
   return {
     isConnected,
     leftStickX,
@@ -98,5 +109,6 @@ export function useGamepad() {
     rightStickX,
     rightStickY,
     gamepadId,
+    grainLength,
   }
 }

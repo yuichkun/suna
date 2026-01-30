@@ -70,6 +70,10 @@ export class WebRuntime implements AudioRuntime {
     this.workletNode?.port.postMessage({ type: 'setPlaybackSpeed', value: speed });
   }
 
+  setGrainLength(length: number): void {
+    this.workletNode?.port.postMessage({ type: 'setGrainLength', length });
+  }
+
   getParameter(id: string): ParameterState | null {
     const config = this.parameterConfigs[id];
     if (!config) return null;
