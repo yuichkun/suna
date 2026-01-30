@@ -39,12 +39,15 @@ fn random_next() -> Int {
 }
 
 ///| Generate random integer in range [min, max)
-fn random_range(min : Int, max : Int) -> Int {
+pub fn random_range(min : Int, max : Int) -> Int {
   if max <= min {
     return min
   }
   let range = max - min
-  min + (random_next() % range)
+  let rand_val = random_next()
+  // Handle negative values from LCG by taking absolute value
+  let abs_rand = if rand_val < 0 { -rand_val } else { rand_val }
+  min + (abs_rand % range)
 }
 
 ///| Initialize grain pool with 100 inactive grains
