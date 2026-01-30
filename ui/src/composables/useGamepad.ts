@@ -12,7 +12,7 @@ const leftTrigger: Ref<number> = ref(0)
 const rightTrigger: Ref<number> = ref(0)
 const gamepadId: Ref<string | null> = ref(null)
 const grainLength: Ref<number> = ref(4224)
-const isTriggered: Ref<boolean> = ref(false)
+const triggerState: Ref<'off' | 'on' | 'freeze'> = ref('off')
 
 const POLL_INTERVAL_MS_250HZ = 4
 
@@ -106,11 +106,32 @@ export function useGamepad() {
   })
 
   watch([leftTrigger, rightTrigger], ([lt, rt]) => {
-    const triggered = lt > 0.5 || rt > 0.5
-    if (triggered !== isTriggered.value) {
-      console.log('[TRIGGER]', triggered ? 'ON' : 'OFF')
-      isTriggered.value = triggered
-      runtime.value?.setGrainDensity?.(triggered ? 1.0 : 0.0)
+    const leftPressed = lt > 0.5
+    const rightPressed = rt > 0.5
+    
+    let newState: 'off' | 'on' | 'freeze'
+    if (leftPressed && rightPressed) {
+      newState = 'freeze'
+    } else if (leftPressed || rightPressed) {
+      newState = 'on'
+    } else {
+      newState = 'off'
+    }
+    
+    if (newState !== triggerState.value) {
+      console.log('[TRIGGER]', newState.toUpperCase())
+      triggerState.value = newState
+      
+      if (newState === 'off') {
+        runtime.value?.setGrainDensity?.(0.0)
+        runtime.value?.setFreeze?.(false)
+      } else if (newState === 'on') {
+        runtime.value?.setGrainDensity?.(1.0)
+        runtime.value?.setFreeze?.(false)
+      } else {
+        runtime.value?.setGrainDensity?.(1.0)
+        runtime.value?.setFreeze?.(true)
+      }
     }
   })
 
@@ -122,6 +143,6 @@ export function useGamepad() {
     rightStickY,
     gamepadId,
     grainLength,
-    isTriggered,
+    triggerState,
   }
 }

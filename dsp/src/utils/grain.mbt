@@ -228,9 +228,15 @@ pub fn update_grain_position(index : Int, delta : Float) -> Unit {
   let grain = grains[index]
   grain.current_pos = grain.current_pos + delta
 
-  // Deactivate if grain has finished
+  // Check if grain has finished
   if grain.current_pos >= Float::from_int(grain.length) {
-    grain.active = 0
+    if get_freeze() {
+      // Freeze mode: loop back to start (same position)
+      grain.current_pos = 0.0
+    } else {
+      // Normal mode: deactivate for respawn at new random position
+      grain.active = 0
+    }
   }
 }
 

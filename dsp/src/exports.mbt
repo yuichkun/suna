@@ -61,3 +61,9 @@ pub fn set_grain_density(density : Float) -> Int {
   @utils.set_grain_density(density)
   0
 }
+
+///|
+pub fn set_freeze(value : Int) -> Int {
+  @utils.set_freeze(value != 0)
+  0
+}

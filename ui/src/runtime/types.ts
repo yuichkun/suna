@@ -32,4 +32,5 @@ export interface AudioRuntime {
   setPlaybackSpeed?(speed: number): void
   setGrainLength?(length: number): void
   setGrainDensity?(density: number): void
+  setFreeze?(freeze: boolean): void
 }

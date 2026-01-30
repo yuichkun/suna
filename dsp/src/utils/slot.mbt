@@ -16,6 +16,9 @@ let sample_rate : Ref[Float] = { val: default_sample_rate }
 let playback_speed : Ref[Float] = { val: 1.0 }
 
 ///|
+let freeze : Ref[Bool] = { val: false }
+
+///|
 pub fn get_sample_rate() -> Float {
   sample_rate.val
 }
@@ -34,6 +37,17 @@ pub fn get_playback_speed() -> Float {
 pub fn set_playback_speed(speed : Float) -> Unit {
   playback_speed.val = speed
   println("playback_speed: \{speed}")
+}
+
+///|
+pub fn get_freeze() -> Bool {
+  freeze.val
+}
+
+///|
+pub fn set_freeze(value : Bool) -> Unit {
+  freeze.val = value
+  println("freeze: \{value}")
 }
 
 ///|

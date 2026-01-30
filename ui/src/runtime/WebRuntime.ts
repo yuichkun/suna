@@ -81,6 +81,10 @@ export class WebRuntime implements AudioRuntime {
     this.workletNode?.port.postMessage({ type: 'setGrainDensity', density });
   }
 
+  setFreeze(freeze: boolean): void {
+    this.workletNode?.port.postMessage({ type: 'setFreeze', freeze });
+  }
+
   getParameter(id: string): ParameterState | null {
     const config = this.parameterConfigs[id];
     if (!config) return null;

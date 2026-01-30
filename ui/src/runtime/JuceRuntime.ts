@@ -93,4 +93,9 @@ export class JuceRuntime implements AudioRuntime {
     if (typeof window === 'undefined' || !window.__JUCE__) return
     getNativeFunction('setGrainDensity')(density)
   }
+
+  setFreeze(freeze: boolean): void {
+    if (typeof window === 'undefined' || !window.__JUCE__) return
+    getNativeFunction('setFreeze')(freeze ? 1 : 0)
+  }
 }

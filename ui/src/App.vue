@@ -7,7 +7,7 @@ import XYPadDisplay from './components/XYPadDisplay.vue'
 
 const { runtime, isWeb, isInitialized, initError } = useRuntime()
 const { loadedBuffers, loadSample, clearSlot, getNextAvailableSlot, MAX_SAMPLES } = useSampler()
-const { isConnected, leftStickX, leftStickY, rightStickX, rightStickY, grainLength, isTriggered } = useGamepad()
+const { isConnected, leftStickX, leftStickY, rightStickX, rightStickY, grainLength, triggerState } = useGamepad()
 
 // Right stick -> blend control
 watch([rightStickX, rightStickY], ([x, y]) => {
@@ -144,8 +144,8 @@ function getSlotData(index: number) {
           <!-- Trigger Indicator -->
           <div class="pad-group">
             <span class="pad-label">TRIGGER</span>
-            <div class="trigger-indicator" :class="{ active: isTriggered }">
-              <span class="trigger-text">{{ isTriggered ? 'ON' : 'OFF' }}</span>
+            <div class="trigger-indicator" :class="triggerState">
+              <span class="trigger-text">{{ triggerState.toUpperCase() }}</span>
             </div>
             <span class="pad-value">LT / RT</span>
           </div>
@@ -430,10 +430,16 @@ function getSlotData(index: number) {
   transition: all 0.1s ease;
 }
 
-.trigger-indicator.active {
+.trigger-indicator.on {
   background: var(--accent);
   border-color: var(--accent);
   box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.trigger-indicator.freeze {
+  background: #4a9eff;
+  border-color: #4a9eff;
+  box-shadow: 0 0 12px rgba(74, 158, 255, 0.4);
 }
 
 .trigger-text {
@@ -443,7 +449,8 @@ function getSlotData(index: number) {
   color: var(--text-muted);
 }
 
-.trigger-indicator.active .trigger-text {
+.trigger-indicator.on .trigger-text,
+.trigger-indicator.freeze .trigger-text {
   color: var(--bg-primary);
 }
 
