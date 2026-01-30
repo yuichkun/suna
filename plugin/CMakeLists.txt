@@ -27,8 +27,8 @@ juce_add_binary_data(SunaUIBinaryData
 # Add the plugin
 juce_add_plugin(Suna
     COMPANY_NAME "SunaAudio"
-    IS_SYNTH FALSE
-    NEEDS_MIDI_INPUT FALSE
+    IS_SYNTH TRUE
+    NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT FALSE
     NEEDS_WEB_BROWSER TRUE
     PLUGIN_MANUFACTURER_CODE Suna
