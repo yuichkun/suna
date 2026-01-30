@@ -15,7 +15,6 @@ libs/wamr/wamr-compiler/build/
 libs/wamr/core/deps/llvm/build/
 
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo
