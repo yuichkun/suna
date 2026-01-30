@@ -8,9 +8,11 @@ test "center_blend_equal_gains_2_slots" {
   set_blend_x(0.0)
   set_blend_y(0.0)
   
-  // Each slot should have gain = 0.5
-  assert_eq(get_slot_gain(0), 0.5)
-  assert_eq(get_slot_gain(1), 0.5)
+  // √N normalization: each slot should have gain = 1/√2 ≈ 0.707
+  // This preserves perceived loudness regardless of slot count
+  let expected : Float = Float::from_double(1.0 / Double::sqrt(2.0))
+  assert_eq(get_slot_gain(0), expected)
+  assert_eq(get_slot_gain(1), expected)
 }
 
 test "center_blend_equal_gains_4_slots" {
@@ -25,14 +27,15 @@ test "center_blend_equal_gains_4_slots" {
   set_blend_x(0.0)
   set_blend_y(0.0)
   
-  // Each slot should have gain = 0.25
-  assert_eq(get_slot_gain(0), 0.25)
-  assert_eq(get_slot_gain(1), 0.25)
-  assert_eq(get_slot_gain(2), 0.25)
-  assert_eq(get_slot_gain(3), 0.25)
+  // √N normalization: each slot should have gain = 1/√4 = 0.5
+  let expected : Float = Float::from_double(1.0 / Double::sqrt(4.0))
+  assert_eq(get_slot_gain(0), expected)
+  assert_eq(get_slot_gain(1), expected)
+  assert_eq(get_slot_gain(2), expected)
+  assert_eq(get_slot_gain(3), expected)
 }
 
-test "total_gain_never_exceeds_one" {
+test "total_gain_sum_equals_sqrt_n" {
   // Setup: 8 slots
   init_slots()
   for i = 0; i < 8; i = i + 1 {
@@ -43,12 +46,16 @@ test "total_gain_never_exceeds_one" {
   set_blend_x(0.0)
   set_blend_y(0.0)
   
-  // Sum of all gains should be exactly 1.0
+  // √N normalization: sum of all gains should be √8 ≈ 2.83
+  // This preserves perceived loudness (uncorrelated signals sum as √N in power)
   let mut total : Float = 0.0
   for i = 0; i < 8; i = i + 1 {
     total = total + get_slot_gain(i)
   }
-  assert_eq(total, 1.0)
+  let expected = Float::from_double(Double::sqrt(8.0))
+  // Use tolerance for floating point comparison (accumulated rounding errors)
+  let diff = if total > expected { total - expected } else { expected - total }
+  assert_true(diff < 0.0001)
 }
 
 test "get_slot_gain_out_of_bounds" {

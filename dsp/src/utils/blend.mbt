@@ -85,12 +85,13 @@ pub fn update_gains() -> Unit {
   }
 
   if total_weight > 0.0 {
+    let sqrt_n = Double::sqrt(slot_count.to_double())
     for i = 0; i < slot_count; i = i + 1 {
-      gains[i] = Float::from_double(weights[i] / total_weight)
+      gains[i] = Float::from_double(weights[i] * sqrt_n / total_weight)
     }
   } else {
-    // Fallback: equal distribution
-    let equal_gain : Float = 1.0 / Float::from_int(slot_count)
+    // Fallback: equal distribution with sqrt normalization
+    let equal_gain : Float = 1.0 / Float::from_int(slot_count).sqrt()
     for i = 0; i < slot_count; i = i + 1 {
       gains[i] = equal_gain
     }

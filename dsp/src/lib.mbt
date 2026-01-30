@@ -1,4 +1,3 @@
-///| Module-level state for grain pool tracking
 let previous_slot_count : Ref[Int] = { val: 0 }
 let grain_pool_initialized : Ref[Bool] = { val: false }
 
@@ -75,9 +74,9 @@ pub fn process_block(
       }
     }
     
-    // Normalize by active grain count (prevent clipping)
+    // Normalize by sqrt of active grain count (preserve perceived loudness)
     if active_count > 0 {
-      out = out / Float::from_int(active_count)
+      out = out / Float::from_int(active_count).sqrt()
     }
     
     @utils.store_f32(left_out_ptr + offset, out)

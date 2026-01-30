@@ -9,6 +9,10 @@ class SunaProcessor extends AudioWorkletProcessor {
     this.rightOutPtr = null;
     this.initialized = false;
 
+    // DEBUG: Peak level monitoring
+    this.peakLevel = 0;
+    this.sampleCount = 0;
+
     this.port.onmessage = (event) => {
       const { type } = event.data;
       if (type === 'init') {
@@ -158,6 +162,20 @@ class SunaProcessor extends AudioWorkletProcessor {
 
     leftOut.set(leftOutView);
     rightOut.set(rightOutView);
+
+    // DEBUG: Peak level monitoring
+    let peak = 0;
+    for (let i = 0; i < leftOut.length; i++) {
+      peak = Math.max(peak, Math.abs(leftOut[i]));
+    }
+    this.peakLevel = Math.max(this.peakLevel, peak);
+    this.sampleCount += leftOut.length;
+
+    if (this.sampleCount >= 44100) {
+      console.log('[LEVEL] peak:', this.peakLevel.toFixed(4));
+      this.peakLevel = 0;
+      this.sampleCount = 0;
+    }
 
     return true;
   }
