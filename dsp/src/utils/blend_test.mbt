@@ -60,3 +60,22 @@ test "get_slot_gain_out_of_bounds" {
   assert_eq(get_slot_gain(-1), 0.0)
   assert_eq(get_slot_gain(999), 0.0)
 }
+
+test "blend_at_slot0_position_4_slots" {
+  // Setup: 4 slots
+  // slot 0: (1, 0), slot 1: (0, 1), slot 2: (-1, 0), slot 3: (0, -1)
+  init_slots()
+  for i = 0; i < 4; i = i + 1 {
+    load_sample_to_slot(i, 1000 + i * 1000, 100) |> ignore
+  }
+  
+  // Move blend to slot 0 position (1, 0)
+  set_blend_x(1.0)
+  set_blend_y(0.0)
+  
+  // slot 0 should have gain = 1.0, others = 0
+  println("slot0 gain: \{get_slot_gain(0)}")
+  println("slot1 gain: \{get_slot_gain(1)}")
+  println("slot2 gain: \{get_slot_gain(2)}")
+  println("slot3 gain: \{get_slot_gain(3)}")
+}

@@ -34,12 +34,12 @@ pub fn get_slot_length(slot : Int) -> Int {
 
 ///|
 pub fn set_blend_x(value : Float) -> Int {
-  let _ = value
+  @utils.set_blend_x(value)
   0
 }
 
 ///|
 pub fn set_blend_y(value : Float) -> Int {
-  let _ = value
+  @utils.set_blend_y(value)
   0
 }
