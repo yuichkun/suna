@@ -9,9 +9,23 @@ SunaAudioProcessorEditor::SunaAudioProcessorEditor(SunaAudioProcessor& p)
 {
     juce::Logger::writeToLog("SunaAudioProcessorEditor: Constructor started");
     
+    // Create web parameter relays
+    blendXRelay_ = std::make_unique<juce::WebSliderRelay>("blendX");
+    blendYRelay_ = std::make_unique<juce::WebSliderRelay>("blendY");
+    playbackSpeedRelay_ = std::make_unique<juce::WebSliderRelay>("playbackSpeed");
+    grainLengthRelay_ = std::make_unique<juce::WebSliderRelay>("grainLength");
+    grainDensityRelay_ = std::make_unique<juce::WebSliderRelay>("grainDensity");
+    freezeRelay_ = std::make_unique<juce::WebToggleRelay>("freeze");
+    
     browser = std::make_unique<juce::WebBrowserComponent>(
         juce::WebBrowserComponent::Options{}
             .withNativeIntegrationEnabled()
+            .withOptionsFrom(*blendXRelay_)
+            .withOptionsFrom(*blendYRelay_)
+            .withOptionsFrom(*playbackSpeedRelay_)
+            .withOptionsFrom(*grainLengthRelay_)
+            .withOptionsFrom(*grainDensityRelay_)
+            .withOptionsFrom(*freezeRelay_)
             .withResourceProvider([this](const auto& url) { return getResource(url); })
             .withKeepPageLoadedWhenBrowserIsHidden()
             .withNativeFunction("loadSample", [this](const auto& params, auto complete) {
@@ -126,6 +140,32 @@ SunaAudioProcessorEditor::SunaAudioProcessorEditor(SunaAudioProcessor& p)
             }));
     
     addAndMakeVisible(*browser);
+    
+    // Create web parameter attachments
+    blendXAttachment_ = std::make_unique<juce::WebSliderParameterAttachment>(
+        *audioProcessor.getParameters().getParameter("blendX"),
+        *blendXRelay_,
+        nullptr);
+    blendYAttachment_ = std::make_unique<juce::WebSliderParameterAttachment>(
+        *audioProcessor.getParameters().getParameter("blendY"),
+        *blendYRelay_,
+        nullptr);
+    playbackSpeedAttachment_ = std::make_unique<juce::WebSliderParameterAttachment>(
+        *audioProcessor.getParameters().getParameter("playbackSpeed"),
+        *playbackSpeedRelay_,
+        nullptr);
+    grainLengthAttachment_ = std::make_unique<juce::WebSliderParameterAttachment>(
+        *audioProcessor.getParameters().getParameter("grainLength"),
+        *grainLengthRelay_,
+        nullptr);
+    grainDensityAttachment_ = std::make_unique<juce::WebSliderParameterAttachment>(
+        *audioProcessor.getParameters().getParameter("grainDensity"),
+        *grainDensityRelay_,
+        nullptr);
+    freezeAttachment_ = std::make_unique<juce::WebToggleParameterAttachment>(
+        *audioProcessor.getParameters().getParameter("freeze"),
+        *freezeRelay_,
+        nullptr);
     
 #if JUCE_DEBUG
     browser->goToURL("http://localhost:5173");
