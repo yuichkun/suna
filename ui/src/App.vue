@@ -4,6 +4,7 @@ import { useRuntime } from './composables/useRuntime'
 import { useSampler } from './composables/useSampler'
 import { useGamepad } from './composables/useGamepad'
 import XYPadDisplay from './components/XYPadDisplay.vue'
+import WaveformCanvas from './components/WaveformCanvas.vue'
 
 const { runtime, isWeb, isInitialized, initError } = useRuntime()
 const { loadedBuffers, loadSample, clearSlot, getNextAvailableSlot, MAX_SAMPLES } = useSampler()
@@ -102,7 +103,10 @@ function getSlotData(index: number) {
           >
             <span class="slot-index">{{ index }}</span>
             <template v-if="getSlotData(index - 1)">
-              <span class="slot-name">{{ getSlotData(index - 1)?.fileName }}</span>
+              <div class="slot-content">
+                <WaveformCanvas :pcm-data="getSlotData(index - 1)?.pcmData ?? null" />
+                <span class="slot-name">{{ getSlotData(index - 1)?.fileName }}</span>
+              </div>
               <button
                 class="slot-delete"
                 @click="handleClearSlot(index - 1)"
@@ -344,14 +348,25 @@ function getSlotData(index: number) {
   color: var(--accent);
 }
 
-.slot-name {
+.slot-content {
   flex: 1;
+  position: relative;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.slot-name {
+  position: relative;
+  z-index: 1;
   font-size: 11px;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px var(--bg-primary);
 }
 
 .slot-empty {
