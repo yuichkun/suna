@@ -303,8 +303,8 @@ void WasmDSP::processBlock(const float* leftIn, const float* rightIn,
                 SUNA_LOG("WasmDSP DIAG: FATAL - init_thread_env returned false");
                 if (numSamples > 0) {
                     size_t copyBytes = static_cast<size_t>(numSamples) * sizeof(float);
-                    std::memcpy(leftOut, leftIn, copyBytes);
-                    std::memcpy(rightOut, rightIn, copyBytes);
+                    std::memset(leftOut, 0, copyBytes);
+                    std::memset(rightOut, 0, copyBytes);
                 }
                 return;
             }
@@ -331,15 +331,13 @@ void WasmDSP::processBlock(const float* leftIn, const float* rightIn,
         }
         if (numSamples > 0) {
             size_t copyBytes = static_cast<size_t>(numSamples) * sizeof(float);
-            std::memcpy(leftOut, leftIn, copyBytes);
-            std::memcpy(rightOut, rightIn, copyBytes);
+            std::memset(leftOut, 0, copyBytes);
+            std::memset(rightOut, 0, copyBytes);
         }
         return;
     }
 
     size_t copyBytes = static_cast<size_t>(numSamples) * sizeof(float);
-    std::memcpy(nativeLeftIn_, leftIn, copyBytes);
-    std::memcpy(nativeRightIn_, rightIn, copyBytes);
 
     wasm_val_t args[6] = {
         { .kind = WASM_I32, .of = { .i32 = 0 } },
@@ -356,8 +354,8 @@ void WasmDSP::processBlock(const float* leftIn, const float* rightIn,
         const char* exception = wasm_runtime_get_exception(moduleInst_);
         SUNA_LOG(std::string("WASM call failed: ") + (exception ? exception : "unknown error"));
         
-        std::memcpy(leftOut, leftIn, copyBytes);
-        std::memcpy(rightOut, rightIn, copyBytes);
+        std::memset(leftOut, 0, copyBytes);
+        std::memset(rightOut, 0, copyBytes);
         return;
     }
 
