@@ -5,7 +5,16 @@ let blend_x : Ref[Float] = { val: 0.0 }
 let blend_y : Ref[Float] = { val: 0.0 }
 
 ///|
+/// Current gains (smoothed)
 let gains : Array[Float] = []
+
+///|
+/// Target gains (set by update_gains, gains interpolate toward this)
+let target_gains : Array[Float] = []
+
+///|
+/// Track previous slot count to detect when slots change
+let prev_slot_count : Ref[Int] = { val: -1 }
 
 ///|
 pub fn set_blend_x(x : Float) -> Unit {
@@ -40,12 +49,18 @@ pub fn get_slot_gain(slot : Int) -> Float {
 ///|
 pub fn update_gains() -> Unit {
   let slot_count = get_slot_count()
-  // Resize gains array to match slot count
+  // Resize gains and target_gains arrays to match slot count
   while gains.length() < slot_count {
     gains.push(0.0)
   }
   while gains.length() > slot_count {
     let _ = gains.pop()
+  }
+  while target_gains.length() < slot_count {
+    target_gains.push(0.0)
+  }
+  while target_gains.length() > slot_count {
+    let _ = target_gains.pop()
   }
   if slot_count == 0 {
     return
@@ -87,15 +102,34 @@ pub fn update_gains() -> Unit {
   if total_weight > 0.0 {
     let sqrt_n = Double::sqrt(slot_count.to_double())
     for i = 0; i < slot_count; i = i + 1 {
-      gains[i] = Float::from_double(weights[i] * sqrt_n / total_weight)
+      // Write to target_gains, not gains directly
+      target_gains[i] = Float::from_double(weights[i] * sqrt_n / total_weight)
     }
   } else {
     // Fallback: equal distribution with sqrt normalization
     let equal_gain : Float = 1.0 / Float::from_int(slot_count).sqrt()
     for i = 0; i < slot_count; i = i + 1 {
-      gains[i] = equal_gain
+      target_gains[i] = equal_gain
     }
   }
 
-  println("gains: \{gains}")
+  // When slot count changes, initialize gains immediately (no smoothing delay)
+  if slot_count != prev_slot_count.val {
+    for i = 0; i < slot_count; i = i + 1 {
+      gains[i] = target_gains[i]
+    }
+    prev_slot_count.val = slot_count
+  }
+
+  println("gains: \{target_gains}")
+}
+
+///|
+/// Smooth gains toward target_gains (call once per sample)
+pub fn smooth_gains() -> Unit {
+  let one_minus_coeff : Float = 1.0 - gain_smooth_coeff
+  for i = 0; i < gains.length(); i = i + 1 {
+    // Exponential smoothing: gain = gain * (1 - coeff) + target * coeff
+    gains[i] = gains[i] * one_minus_coeff + target_gains[i] * gain_smooth_coeff
+  }
 }

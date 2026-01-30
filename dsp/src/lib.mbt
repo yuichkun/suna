@@ -36,6 +36,9 @@ pub fn process_block(
   let grain_count = @utils.get_grain_count()
   
   for i = 0; i < num_samples; i = i + 1 {
+    // Smooth gains toward target (prevents clicks on blend changes)
+    @utils.smooth_gains()
+    
     let offset = i * @utils.float32_size
     let mut out : Float = 0.0
     let mut active_count = 0

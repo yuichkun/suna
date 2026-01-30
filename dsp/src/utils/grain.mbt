@@ -1,15 +1,4 @@
 ///|
-let total_grain_count : Int = 100
-
-///|
-/// Envelope attack ratio (0.1 = 10% of grain length)
-let envelope_attack_ratio : Float = 0.1
-
-///|
-/// Envelope release ratio (0.1 = 10% of grain length)
-let envelope_release_ratio : Float = 0.1
-
-///|
 /// Calculate trapezoidal envelope value for a grain
 /// Returns 0.0-1.0 amplitude multiplier
 pub fn calculate_envelope(current_pos : Float, length : Int) -> Float {
