@@ -60,9 +60,12 @@ pub fn process_block(
       let pos_int = (grain.start_pos + grain.current_pos.to_int()) % slot_len
       let sample = @utils.load_f32(ptr + pos_int * @utils.float32_size)
       
+      // Apply grain envelope (smooths start/end to prevent clicks)
+      let envelope = @utils.calculate_envelope(grain.current_pos, grain.length)
+      
       // Apply slot gain (from blend XY)
       let gain = @utils.get_slot_gain(slot)
-      out = out + sample * gain
+      out = out + sample * envelope * gain
       active_count = active_count + 1
       
       // Advance grain position by playback speed

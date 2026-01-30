@@ -454,3 +454,97 @@ test "multiple distributions reset grain state" {
   // But the grain should be re-initialized
   assert_eq(grain1_second.current_pos, 0.0)
 }
+
+// ============================================
+// Envelope Tests
+// ============================================
+
+test "envelope returns 0 for zero length" {
+  let env = calculate_envelope(0.0, 0)
+  assert_eq(env, 0.0)
+}
+
+test "envelope returns 0 for negative length" {
+  let env = calculate_envelope(0.0, -100)
+  assert_eq(env, 0.0)
+}
+
+test "envelope at start is 0" {
+  // At position 0, should be at start of attack ramp
+  let env = calculate_envelope(0.0, 1000)
+  assert_eq(env, 0.0)
+}
+
+test "envelope at end approaches 0" {
+  // At position 999 (just before 1000), should be near 0
+  let env = calculate_envelope(999.0, 1000)
+  // With 10% release, release_start = 900
+  // release_samples = 100
+  // env = (1000 - 999) / 100 = 0.01
+  assert_eq(env < 0.02, true)
+  assert_eq(env >= 0.0, true)
+}
+
+test "envelope at middle is 1.0" {
+  // At position 500, should be in sustain phase
+  // attack ends at 100 (10%), release starts at 900 (90%)
+  let env = calculate_envelope(500.0, 1000)
+  assert_eq(env, 1.0)
+}
+
+test "envelope attack phase ramps up linearly" {
+  // With 10% attack on 1000 samples, attack is 0-100 samples
+  // At position 50, should be 0.5
+  let env = calculate_envelope(50.0, 1000)
+  assert_eq(env, 0.5)
+}
+
+test "envelope release phase ramps down linearly" {
+  // With 10% release on 1000 samples, release starts at 900
+  // At position 950, should be 0.5
+  // release_samples = 100
+  // env = (1000 - 950) / 100 = 0.5
+  let env = calculate_envelope(950.0, 1000)
+  assert_eq(env, 0.5)
+}
+
+test "envelope at attack boundary is 1.0" {
+  // Attack ends at 100 (10% of 1000)
+  let env = calculate_envelope(100.0, 1000)
+  assert_eq(env, 1.0)
+}
+
+test "envelope at release boundary is 1.0" {
+  // Release starts at 900 (90% of 1000)
+  let env = calculate_envelope(899.0, 1000)
+  assert_eq(env, 1.0)
+}
+
+test "envelope with short grain length" {
+  // 100 samples: attack=10, release starts at 90
+  let env_start = calculate_envelope(0.0, 100)
+  let env_mid = calculate_envelope(50.0, 100)
+  let env_end = calculate_envelope(99.0, 100)
+  
+  assert_eq(env_start, 0.0)
+  assert_eq(env_mid, 1.0)
+  assert_eq(env_end < 0.15, true) // Should be close to 0
+}
+
+test "envelope never exceeds 1.0" {
+  // Test various positions
+  for i = 0; i < 100; i = i + 1 {
+    let pos = Float::from_int(i * 10)
+    let env = calculate_envelope(pos, 1000)
+    assert_eq(env <= 1.0, true)
+  }
+}
+
+test "envelope never goes negative" {
+  // Test various positions including beyond length
+  for i = 0; i < 120; i = i + 1 {
+    let pos = Float::from_int(i * 10)
+    let env = calculate_envelope(pos, 1000)
+    assert_eq(env >= 0.0, true)
+  }
+}

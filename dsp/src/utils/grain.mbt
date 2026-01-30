@@ -2,6 +2,53 @@
 let total_grain_count : Int = 100
 
 ///|
+/// Envelope attack ratio (0.1 = 10% of grain length)
+let envelope_attack_ratio : Float = 0.04
+
+///|
+/// Envelope release ratio (0.1 = 10% of grain length)
+let envelope_release_ratio : Float = 0.04
+
+///|
+/// Calculate trapezoidal envelope value for a grain
+/// Returns 0.0-1.0 amplitude multiplier
+pub fn calculate_envelope(current_pos : Float, length : Int) -> Float {
+  if length <= 0 {
+    return 0.0
+  }
+  let len_f = Float::from_int(length)
+
+  // Beyond grain length: return 0
+  if current_pos >= len_f {
+    return 0.0
+  }
+  let attack_samples = len_f * envelope_attack_ratio
+  let release_start = len_f * (1.0 - envelope_release_ratio)
+
+  // Attack phase: linear ramp 0 → 1
+  if current_pos < attack_samples {
+    if attack_samples > 0.0 {
+      return current_pos / attack_samples
+    } else {
+      return 1.0
+    }
+  }
+
+  // Release phase: linear ramp 1 → 0
+  if current_pos >= release_start {
+    let release_samples = len_f - release_start
+    if release_samples > 0.0 {
+      return (len_f - current_pos) / release_samples
+    } else {
+      return 0.0
+    }
+  }
+
+  // Sustain phase: full amplitude
+  1.0
+}
+
+///|
 pub struct Grain {
   mut slot : Int
   mut start_pos : Int
