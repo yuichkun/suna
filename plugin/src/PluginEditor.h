@@ -26,7 +26,7 @@ private:
     std::unique_ptr<juce::WebSliderRelay> playbackSpeedRelay_;
     std::unique_ptr<juce::WebSliderRelay> grainLengthRelay_;
     std::unique_ptr<juce::WebSliderRelay> grainDensityRelay_;
-    std::unique_ptr<juce::WebToggleRelay> freezeRelay_;
+    std::unique_ptr<juce::WebToggleButtonRelay> freezeRelay_;
     
     // Web parameter attachments
     std::unique_ptr<juce::WebSliderParameterAttachment> blendXAttachment_;
@@ -34,7 +34,7 @@ private:
     std::unique_ptr<juce::WebSliderParameterAttachment> playbackSpeedAttachment_;
     std::unique_ptr<juce::WebSliderParameterAttachment> grainLengthAttachment_;
     std::unique_ptr<juce::WebSliderParameterAttachment> grainDensityAttachment_;
-    std::unique_ptr<juce::WebToggleParameterAttachment> freezeAttachment_;
+    std::unique_ptr<juce::WebToggleButtonParameterAttachment> freezeAttachment_;
     
     std::optional<juce::WebBrowserComponent::Resource> getResource(const juce::String& url);
     void grabWebViewFocusIfSafe();

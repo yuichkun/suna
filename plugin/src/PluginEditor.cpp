@@ -15,7 +15,7 @@ SunaAudioProcessorEditor::SunaAudioProcessorEditor(SunaAudioProcessor& p)
     playbackSpeedRelay_ = std::make_unique<juce::WebSliderRelay>("playbackSpeed");
     grainLengthRelay_ = std::make_unique<juce::WebSliderRelay>("grainLength");
     grainDensityRelay_ = std::make_unique<juce::WebSliderRelay>("grainDensity");
-    freezeRelay_ = std::make_unique<juce::WebToggleRelay>("freeze");
+    freezeRelay_ = std::make_unique<juce::WebToggleButtonRelay>("freeze");
     
     browser = std::make_unique<juce::WebBrowserComponent>(
         juce::WebBrowserComponent::Options{}
@@ -162,7 +162,7 @@ SunaAudioProcessorEditor::SunaAudioProcessorEditor(SunaAudioProcessor& p)
         *audioProcessor.getParameters().getParameter("grainDensity"),
         *grainDensityRelay_,
         nullptr);
-    freezeAttachment_ = std::make_unique<juce::WebToggleParameterAttachment>(
+    freezeAttachment_ = std::make_unique<juce::WebToggleButtonParameterAttachment>(
         *audioProcessor.getParameters().getParameter("freeze"),
         *freezeRelay_,
         nullptr);
