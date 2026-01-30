@@ -31,4 +31,5 @@ export interface AudioRuntime {
   setBlendY?(value: number): void
   setPlaybackSpeed?(speed: number): void
   setGrainLength?(length: number): void
+  setGrainDensity?(density: number): void
 }

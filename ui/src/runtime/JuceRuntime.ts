@@ -88,4 +88,9 @@ export class JuceRuntime implements AudioRuntime {
     if (typeof window === 'undefined' || !window.__JUCE__) return
     getNativeFunction('setGrainLength')(length)
   }
+
+  setGrainDensity(density: number): void {
+    if (typeof window === 'undefined' || !window.__JUCE__) return
+    getNativeFunction('setGrainDensity')(density)
+  }
 }

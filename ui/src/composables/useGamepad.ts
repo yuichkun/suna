@@ -8,8 +8,11 @@ const leftStickX: Ref<number> = ref(0)
 const leftStickY: Ref<number> = ref(0)
 const rightStickX: Ref<number> = ref(0)
 const rightStickY: Ref<number> = ref(0)
+const leftTrigger: Ref<number> = ref(0)
+const rightTrigger: Ref<number> = ref(0)
 const gamepadId: Ref<string | null> = ref(null)
 const grainLength: Ref<number> = ref(4224)
+const isTriggered: Ref<boolean> = ref(false)
 
 // Non-reactive state for RAF management
 let animationFrameId: number | null = null
@@ -21,12 +24,12 @@ function pollGamepad(): void {
   if (gamepadIndex !== null) {
     const gamepad = gamepads[gamepadIndex]
     if (gamepad) {
-      // Standard Mapping: axes[0,1] = left stick, axes[2,3] = right stick
-      // Invert Y: gamepad up is -1, but we want up to be +1
       leftStickX.value = gamepad.axes[0] ?? 0
       leftStickY.value = -(gamepad.axes[1] ?? 0)
       rightStickX.value = gamepad.axes[2] ?? 0
       rightStickY.value = -(gamepad.axes[3] ?? 0)
+      leftTrigger.value = gamepad.buttons[6]?.value ?? 0
+      rightTrigger.value = gamepad.buttons[7]?.value ?? 0
     }
   }
 
@@ -65,6 +68,8 @@ function onGamepadDisconnected(event: GamepadEvent): void {
     leftStickY.value = 0
     rightStickX.value = 0
     rightStickY.value = 0
+    leftTrigger.value = 0
+    rightTrigger.value = 0
     stopPolling()
   }
 }
@@ -95,11 +100,19 @@ export function useGamepad() {
     stopPolling()
   })
 
-  // Map left stick Y to grain length: -1 (down) to +1 (up) -> 256 to 8192 samples
   watch(leftStickY, (y) => {
     const length = 256 + Math.floor((y + 1) * 3968)
     grainLength.value = length
     runtime.value?.setGrainLength?.(length)
+  })
+
+  watch([leftTrigger, rightTrigger], ([lt, rt]) => {
+    const triggered = lt > 0.5 || rt > 0.5
+    if (triggered !== isTriggered.value) {
+      console.log('[TRIGGER]', triggered ? 'ON' : 'OFF')
+      isTriggered.value = triggered
+      runtime.value?.setGrainDensity?.(triggered ? 1.0 : 0.0)
+    }
   })
 
   return {
@@ -110,5 +123,6 @@ export function useGamepad() {
     rightStickY,
     gamepadId,
     grainLength,
+    isTriggered,
   }
 }

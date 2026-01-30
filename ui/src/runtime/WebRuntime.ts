@@ -39,6 +39,9 @@ export class WebRuntime implements AudioRuntime {
 
   async loadSample(slot: number, pcmData: Float32Array, sampleRate: number): Promise<void> {
     if (!this.workletNode) throw new Error('Runtime not initialized');
+    
+    await this.audioContext?.resume();
+    
     this.workletNode.port.postMessage(
       { type: 'loadSample', slot, pcmData, sampleRate },
       [pcmData.buffer]
@@ -72,6 +75,10 @@ export class WebRuntime implements AudioRuntime {
 
   setGrainLength(length: number): void {
     this.workletNode?.port.postMessage({ type: 'setGrainLength', length });
+  }
+
+  setGrainDensity(density: number): void {
+    this.workletNode?.port.postMessage({ type: 'setGrainDensity', density });
   }
 
   getParameter(id: string): ParameterState | null {

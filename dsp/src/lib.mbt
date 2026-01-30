@@ -33,7 +33,7 @@ pub fn process_block(
   let speed = @utils.get_playback_speed()
   let abs_speed = if speed < 0.0 { -speed } else { speed }
   let reverse = speed < 0.0
-  let grain_count = @utils.get_grain_count()
+  let active_grain_count = @utils.get_active_grain_count()
   
   for i = 0; i < num_samples; i = i + 1 {
     // Smooth gains toward target (prevents clicks on blend changes)
@@ -43,8 +43,7 @@ pub fn process_block(
     let mut out : Float = 0.0
     let mut active_count = 0
     
-    // Loop through 100 grains instead of slots
-    for grain_idx = 0; grain_idx < grain_count; grain_idx = grain_idx + 1 {
+    for grain_idx = 0; grain_idx < active_grain_count; grain_idx = grain_idx + 1 {
       let grain = @utils.get_grain(grain_idx)
       
       // Skip inactive grains

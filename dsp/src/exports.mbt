@@ -55,3 +55,9 @@ pub fn set_grain_length(length : Int) -> Int {
   @utils.set_grain_length(length)
   0
 }
+
+///|
+pub fn set_grain_density(density : Float) -> Int {
+  @utils.set_grain_density(density)
+  0
+}

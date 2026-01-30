@@ -56,6 +56,10 @@ let grains : Array[Grain] = []
 let grain_length : Ref[Int] = { val: 4224 }
 
 ///|
+/// Grain density (0.0 to 1.0, controlled by RT trigger)
+let grain_density : Ref[Float] = { val: 0.0 }
+
+///|
 /// LCG random seed
 let random_seed : Ref[Int] = { val: 12345 }
 
@@ -71,6 +75,24 @@ pub fn set_grain_length(length : Int) -> Unit {
   if length > 0 {
     grain_length.val = length
   }
+}
+
+///|
+pub fn get_grain_density() -> Float {
+  grain_density.val
+}
+
+///|
+pub fn set_grain_density(density : Float) -> Unit {
+  if density >= 0.0 && density <= 1.0 {
+    grain_density.val = density
+  }
+}
+
+///|
+pub fn get_active_grain_count() -> Int {
+  let range = total_grain_count - min_grain_count
+  min_grain_count + (Float::from_int(range) * grain_density.val).to_int()
 }
 
 ///| LCG random number generator

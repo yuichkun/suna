@@ -6,8 +6,8 @@ import { useGamepad } from './composables/useGamepad'
 import XYPadDisplay from './components/XYPadDisplay.vue'
 
 const { runtime, isWeb, isInitialized, initError } = useRuntime()
-const { loadedBuffers, isPlaying, loadSample, clearSlot, getNextAvailableSlot, play, stop, MAX_SAMPLES } = useSampler()
-const { isConnected, leftStickX, leftStickY, rightStickX, rightStickY, grainLength } = useGamepad()
+const { loadedBuffers, loadSample, clearSlot, getNextAvailableSlot, MAX_SAMPLES } = useSampler()
+const { isConnected, leftStickX, leftStickY, rightStickX, rightStickY, grainLength, isTriggered } = useGamepad()
 
 // Right stick -> blend control
 watch([rightStickX, rightStickY], ([x, y]) => {
@@ -47,18 +47,6 @@ async function onDrop(event: DragEvent) {
 function handleClearSlot(slotIndex: number) {
   clearSlot(slotIndex)
   runtime.value?.clearSlot?.(slotIndex)
-}
-
-function togglePlayback() {
-  if (!runtime.value) return
-
-  if (isPlaying.value) {
-    stop()
-    runtime.value.stopAll?.()
-  } else {
-    play()
-    runtime.value.playAll?.()
-  }
 }
 
 function getSlotData(index: number) {
@@ -153,22 +141,13 @@ function getSlotData(index: number) {
             />
           </div>
 
-          <!-- Playback Controls -->
-          <div class="playback-controls">
-            <button
-              class="btn btn-playback"
-              :class="{ 'btn-playing': isPlaying }"
-              @click="togglePlayback"
-              :disabled="loadedBuffers.size === 0"
-            >
-              <svg v-if="!isPlaying" class="play-icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M8 5v14l11-7z"/>
-              </svg>
-              <svg v-else class="stop-icon" viewBox="0 0 24 24" fill="currentColor">
-                <rect x="6" y="6" width="12" height="12" rx="1"/>
-              </svg>
-              <span>{{ isPlaying ? 'Stop' : 'Play All' }}</span>
-            </button>
+          <!-- Trigger Indicator -->
+          <div class="pad-group">
+            <span class="pad-label">TRIGGER</span>
+            <div class="trigger-indicator" :class="{ active: isTriggered }">
+              <span class="trigger-text">{{ isTriggered ? 'ON' : 'OFF' }}</span>
+            </div>
+            <span class="pad-value">LT / RT</span>
           </div>
         </div>
       </main>
@@ -438,56 +417,34 @@ function getSlotData(index: number) {
   margin-top: 4px;
 }
 
-/* Playback Controls */
-.playback-controls {
-  display: flex;
-  justify-content: center;
-}
-
-.btn {
+/* Trigger Indicator */
+.trigger-indicator {
+  width: 60px;
+  height: 24px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 14px 28px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 500;
+  transition: all 0.1s ease;
+}
+
+.trigger-indicator.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.trigger-text {
+  font-size: 10px;
+  font-weight: 600;
   letter-spacing: 0.1em;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
-.btn:hover:not(:disabled) {
-  background: var(--bg-tertiary);
-  border-color: var(--accent);
-  box-shadow: 0 0 16px var(--accent-glow);
-}
-
-.btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.btn-playback {
-  min-width: 140px;
-}
-
-.btn-playing {
-  background: var(--accent-subtle);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.play-icon,
-.stop-icon {
-  width: 16px;
-  height: 16px;
+.trigger-indicator.active .trigger-text {
+  color: var(--bg-primary);
 }
 
 /* Footer */
