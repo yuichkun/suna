@@ -496,6 +496,16 @@ npm run setup:macos
 
 ## Notes for AI Agents
 
+### ⚠️ CRITICAL: Communication Rules
+
+**日本語で話す際は、必ず敬語（丁寧語）を使用してください。タメ口は禁止です。**
+
+例:
+- ❌ 「やる」「わかった」「すまん」
+- ✅ 「実装します」「承知しました」「申し訳ありません」
+
+---
+
 ### ⚠️ CRITICAL: Task Planning Rules
 
 **planファイルやtodoツールに「自分で完了にできないタスク」を絶対に入れないでください。**
