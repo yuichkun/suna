@@ -43,3 +43,9 @@ pub fn set_blend_y(value : Float) -> Int {
   @utils.set_blend_y(value)
   0
 }
+
+///|
+pub fn set_playback_speed(speed : Float) -> Int {
+  @utils.set_playback_speed(speed)
+  0
+}

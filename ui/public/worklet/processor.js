@@ -25,6 +25,8 @@ class SunaProcessor extends AudioWorkletProcessor {
         this.handleSetBlendX(event.data.value);
       } else if (type === 'setBlendY') {
         this.handleSetBlendY(event.data.value);
+      } else if (type === 'setPlaybackSpeed') {
+        this.handleSetPlaybackSpeed(event.data.value);
       }
     };
   }
@@ -109,6 +111,11 @@ class SunaProcessor extends AudioWorkletProcessor {
   handleSetBlendY(value) {
     if (!this.wasm) return;
     this.wasm.set_blend_y(value);
+  }
+
+  handleSetPlaybackSpeed(value) {
+    if (!this.wasm) return;
+    this.wasm.set_playback_speed(value);
   }
 
   process(inputs, outputs) {

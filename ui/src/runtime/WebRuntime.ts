@@ -66,6 +66,10 @@ export class WebRuntime implements AudioRuntime {
     this.workletNode?.port.postMessage({ type: 'setBlendY', value });
   }
 
+  setPlaybackSpeed(speed: number): void {
+    this.workletNode?.port.postMessage({ type: 'setPlaybackSpeed', value: speed });
+  }
+
   getParameter(id: string): ParameterState | null {
     const config = this.parameterConfigs[id];
     if (!config) return null;

@@ -14,7 +14,8 @@
         "get_slot_length",
         "process_block",
         "set_blend_x",
-        "set_blend_y"
+        "set_blend_y",
+        "set_playback_speed"
       ],
       "heap-start-address": 65536,
       "export-memory-name": "memory",

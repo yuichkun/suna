@@ -3,6 +3,8 @@ import type { Ref } from 'vue'
 
 // Module-level reactive state (singleton pattern)
 const isConnected: Ref<boolean> = ref(false)
+const leftStickX: Ref<number> = ref(0)
+const leftStickY: Ref<number> = ref(0)
 const rightStickX: Ref<number> = ref(0)
 const rightStickY: Ref<number> = ref(0)
 const gamepadId: Ref<string | null> = ref(null)
@@ -17,8 +19,10 @@ function pollGamepad(): void {
   if (gamepadIndex !== null) {
     const gamepad = gamepads[gamepadIndex]
     if (gamepad) {
-      // Standard Mapping: axes[2] = right stick X, axes[3] = right stick Y
+      // Standard Mapping: axes[0,1] = left stick, axes[2,3] = right stick
       // Invert Y: gamepad up is -1, but we want up to be +1
+      leftStickX.value = gamepad.axes[0] ?? 0
+      leftStickY.value = -(gamepad.axes[1] ?? 0)
       rightStickX.value = gamepad.axes[2] ?? 0
       rightStickY.value = -(gamepad.axes[3] ?? 0)
     }
@@ -55,6 +59,8 @@ function onGamepadDisconnected(event: GamepadEvent): void {
     gamepadIndex = null
     gamepadId.value = null
     isConnected.value = false
+    leftStickX.value = 0
+    leftStickY.value = 0
     rightStickX.value = 0
     rightStickY.value = 0
     stopPolling()
@@ -87,6 +93,8 @@ export function useGamepad() {
 
   return {
     isConnected,
+    leftStickX,
+    leftStickY,
     rightStickX,
     rightStickY,
     gamepadId,

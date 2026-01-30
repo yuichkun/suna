@@ -7,12 +7,18 @@ import XYPadDisplay from './components/XYPadDisplay.vue'
 
 const { runtime, isWeb, isInitialized, initError } = useRuntime()
 const { loadedBuffers, isPlaying, loadSample, clearSlot, getNextAvailableSlot, play, stop, MAX_SAMPLES } = useSampler()
-const { isConnected, rightStickX, rightStickY } = useGamepad()
+const { isConnected, leftStickX, leftStickY, rightStickX, rightStickY } = useGamepad()
 
-// Send gamepad input to runtime
+// Right stick -> blend control
 watch([rightStickX, rightStickY], ([x, y]) => {
   runtime.value?.setBlendX?.(x)
   runtime.value?.setBlendY?.(y)
+})
+
+// Left stick X -> playback speed (-1..1 maps to -2..2)
+watch(leftStickX, (x) => {
+  const speed = x * 2
+  runtime.value?.setPlaybackSpeed?.(speed)
 })
 
 const isDragging = ref(false)
@@ -123,15 +129,28 @@ function getSlotData(index: number) {
           </div>
         </div>
 
-        <!-- Controls Row: XYPad + Playback -->
+        <!-- Controls Row: XYPads + Playback -->
         <div class="controls-row">
-          <!-- XY Pad Display -->
-          <XYPadDisplay
-            :x="rightStickX"
-            :y="rightStickY"
-            :is-connected="isConnected"
-            :slot-count="loadedBuffers.size"
-          />
+          <!-- Left Stick: Speed Control -->
+          <div class="pad-group">
+            <span class="pad-label">SPEED</span>
+            <XYPadDisplay
+              :x="leftStickX"
+              :y="leftStickY"
+              :is-connected="isConnected"
+            />
+          </div>
+
+          <!-- Right Stick: Blend Control -->
+          <div class="pad-group">
+            <span class="pad-label">BLEND</span>
+            <XYPadDisplay
+              :x="rightStickX"
+              :y="rightStickY"
+              :is-connected="isConnected"
+              :slot-count="loadedBuffers.size"
+            />
+          </div>
 
           <!-- Playback Controls -->
           <div class="playback-controls">
@@ -221,7 +240,7 @@ function getSlotData(index: number) {
 
 .sampler-container {
   display: flex;
-  width: 400px;
+  width: 500px;
   margin: 0 auto;
   flex-direction: column;
   gap: 16px;
@@ -389,9 +408,26 @@ function getSlotData(index: number) {
 /* Controls Row */
 .controls-row {
   display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pad-group {
+  display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
+}
+
+.pad-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  text-transform: uppercase;
 }
 
 /* Playback Controls */

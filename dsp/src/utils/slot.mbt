@@ -13,6 +13,9 @@ let slots : Array[SlotMeta] = []
 let sample_rate : Ref[Float] = { val: default_sample_rate }
 
 ///|
+let playback_speed : Ref[Float] = { val: 1.0 }
+
+///|
 pub fn get_sample_rate() -> Float {
   sample_rate.val
 }
@@ -20,6 +23,17 @@ pub fn get_sample_rate() -> Float {
 ///|
 pub fn set_sample_rate(sr : Float) -> Unit {
   sample_rate.val = sr
+}
+
+///|
+pub fn get_playback_speed() -> Float {
+  playback_speed.val
+}
+
+///|
+pub fn set_playback_speed(speed : Float) -> Unit {
+  playback_speed.val = speed
+  println("playback_speed: \{speed}")
 }
 
 ///|
