@@ -14,8 +14,9 @@ const gamepadId: Ref<string | null> = ref(null)
 const grainLength: Ref<number> = ref(4224)
 const isTriggered: Ref<boolean> = ref(false)
 
-// Non-reactive state for RAF management
-let animationFrameId: number | null = null
+const POLL_INTERVAL_MS_250HZ = 4
+
+let pollIntervalId: number | null = null
 let gamepadIndex: number | null = null
 
 function pollGamepad(): void {
@@ -32,20 +33,18 @@ function pollGamepad(): void {
       rightTrigger.value = gamepad.buttons[7]?.value ?? 0
     }
   }
-
-  animationFrameId = requestAnimationFrame(pollGamepad)
 }
 
 function startPolling(): void {
-  if (animationFrameId === null) {
-    animationFrameId = requestAnimationFrame(pollGamepad)
+  if (pollIntervalId === null) {
+    pollIntervalId = window.setInterval(pollGamepad, POLL_INTERVAL_MS_250HZ)
   }
 }
 
 function stopPolling(): void {
-  if (animationFrameId !== null) {
-    cancelAnimationFrame(animationFrameId)
-    animationFrameId = null
+  if (pollIntervalId !== null) {
+    clearInterval(pollIntervalId)
+    pollIntervalId = null
   }
 }
 
