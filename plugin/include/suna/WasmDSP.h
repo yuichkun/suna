@@ -53,6 +53,10 @@ public:
     int getSlotLength(int slot);
     void setBlendX(float value);
     void setBlendY(float value);
+    void setPlaybackSpeed(float speed);
+    void setGrainLength(int length);
+    void setGrainDensity(float density);
+    void setFreeze(int value);
 
     void shutdown();
 
@@ -75,6 +79,10 @@ private:
     wasm_function_inst_t processBlockFunc_ = nullptr;
     wasm_function_inst_t setBlendXFunc_ = nullptr;
     wasm_function_inst_t setBlendYFunc_ = nullptr;
+    wasm_function_inst_t setPlaybackSpeedFunc_ = nullptr;
+    wasm_function_inst_t setGrainLengthFunc_ = nullptr;
+    wasm_function_inst_t setGrainDensityFunc_ = nullptr;
+    wasm_function_inst_t setFreezeFunc_ = nullptr;
 
     uint32_t leftInOffset_ = 0;
     uint32_t rightInOffset_ = 0;

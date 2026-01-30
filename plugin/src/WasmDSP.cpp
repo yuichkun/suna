@@ -22,6 +22,21 @@
 
 namespace suna {
 
+static void spectestPrintChar(wasm_exec_env_t exec_env, int32_t charCode) {
+    (void)exec_env;
+    static std::string printBuffer;
+    if (charCode == 10) {
+        SUNA_LOG("[WASM] " + printBuffer);
+        printBuffer.clear();
+    } else {
+        printBuffer += static_cast<char>(charCode);
+    }
+}
+
+static NativeSymbol nativeSymbols[] = {
+    { "print_char", (void*)spectestPrintChar, "(i)", nullptr }
+};
+
 WasmDSP::WasmDSP() {
     std::memset(heapBuf_, 0, HEAP_BUF_SIZE);
 }
@@ -52,6 +67,15 @@ bool WasmDSP::initialize(const uint8_t* aotData, size_t size) {
 
     if (!wasm_runtime_full_init(&initArgs)) {
         SUNA_LOG("WasmDSP::initialize() - Failed: wasm_runtime_full_init failed");
+        std::free(aotDataCopy_);
+        aotDataCopy_ = nullptr;
+        return false;
+    }
+
+    if (!wasm_runtime_register_natives("spectest", nativeSymbols,
+                                        sizeof(nativeSymbols) / sizeof(NativeSymbol))) {
+        SUNA_LOG("WasmDSP::initialize() - Failed: wasm_runtime_register_natives failed");
+        wasm_runtime_destroy();
         std::free(aotDataCopy_);
         aotDataCopy_ = nullptr;
         return false;
@@ -116,10 +140,15 @@ bool WasmDSP::lookupFunctions() {
     processBlockFunc_ = wasm_runtime_lookup_function(moduleInst_, "process_block");
     setBlendXFunc_ = wasm_runtime_lookup_function(moduleInst_, "set_blend_x");
     setBlendYFunc_ = wasm_runtime_lookup_function(moduleInst_, "set_blend_y");
+    setPlaybackSpeedFunc_ = wasm_runtime_lookup_function(moduleInst_, "set_playback_speed");
+    setGrainLengthFunc_ = wasm_runtime_lookup_function(moduleInst_, "set_grain_length");
+    setGrainDensityFunc_ = wasm_runtime_lookup_function(moduleInst_, "set_grain_density");
+    setFreezeFunc_ = wasm_runtime_lookup_function(moduleInst_, "set_freeze");
 
     return initSamplerFunc_ && loadSampleFunc_ && clearSlotFunc_ &&
            playAllFunc_ && stopAllFunc_ && getSlotLengthFunc_ && processBlockFunc_ &&
-           setBlendXFunc_ && setBlendYFunc_;
+           setBlendXFunc_ && setBlendYFunc_ && setPlaybackSpeedFunc_ &&
+           setGrainLengthFunc_ && setGrainDensityFunc_ && setFreezeFunc_;
 }
 
 bool WasmDSP::allocateBuffers(int maxBlockSize) {
@@ -323,13 +352,6 @@ void WasmDSP::processBlock(const float* leftIn, const float* rightIn,
     wasm_val_t results[1] = { { .kind = WASM_I32, .of = { .i32 = -999 } } };
     bool success = wasm_runtime_call_wasm_a(execEnv_, processBlockFunc_, 1, results, 6, args);
     
-    static bool wasmCallLogged = false;
-    if (!wasmCallLogged) {
-        SUNA_LOG("WasmDSP::processBlock() - WASM call success=" + 
-            std::string(success ? "true" : "false"));
-        wasmCallLogged = true;
-    }
-    
     if (!success) {
         const char* exception = wasm_runtime_get_exception(moduleInst_);
         SUNA_LOG(std::string("WASM call failed: ") + (exception ? exception : "unknown error"));
@@ -353,6 +375,7 @@ void WasmDSP::loadSample(int slot, const float* data, int length) {
     std::memcpy(nativeSampleData_ + slotOffset, data, static_cast<size_t>(copyLength) * sizeof(float));
 
     uint32_t dataPtr = SAMPLE_DATA_START + slotOffset * sizeof(float);
+    
     wasm_val_t args[3] = {
         { .kind = WASM_I32, .of = { .i32 = slot } },
         { .kind = WASM_I32, .of = { .i32 = static_cast<int32_t>(dataPtr) } },
@@ -360,6 +383,8 @@ void WasmDSP::loadSample(int slot, const float* data, int length) {
     };
     wasm_val_t results[1] = { { .kind = WASM_I32, .of = { .i32 = 0 } } };
     wasm_runtime_call_wasm_a(execEnv_, loadSampleFunc_, 1, results, 3, args);
+    
+    SUNA_LOG("loadSample: Loaded " + std::to_string(copyLength) + " samples into slot " + std::to_string(slot));
 }
 
 void WasmDSP::clearSlot(int slot) {
@@ -387,7 +412,8 @@ void WasmDSP::setBlendX(float value) {
     wasm_val_t args[1] = {
         { .kind = WASM_F32, .of = { .f32 = value } }
     };
-    wasm_runtime_call_wasm_a(execEnv_, setBlendXFunc_, 0, nullptr, 1, args);
+    wasm_val_t results[1] = { { .kind = WASM_I32, .of = { .i32 = 0 } } };
+    wasm_runtime_call_wasm_a(execEnv_, setBlendXFunc_, 1, results, 1, args);
 }
 
 void WasmDSP::setBlendY(float value) {
@@ -396,7 +422,46 @@ void WasmDSP::setBlendY(float value) {
     wasm_val_t args[1] = {
         { .kind = WASM_F32, .of = { .f32 = value } }
     };
-    wasm_runtime_call_wasm_a(execEnv_, setBlendYFunc_, 0, nullptr, 1, args);
+    wasm_val_t results[1] = { { .kind = WASM_I32, .of = { .i32 = 0 } } };
+    wasm_runtime_call_wasm_a(execEnv_, setBlendYFunc_, 1, results, 1, args);
+}
+
+void WasmDSP::setPlaybackSpeed(float speed) {
+    if (!initialized_) return;
+    
+    wasm_val_t args[1] = {
+        { .kind = WASM_F32, .of = { .f32 = speed } }
+    };
+    wasm_val_t results[1] = { { .kind = WASM_I32, .of = { .i32 = 0 } } };
+    wasm_runtime_call_wasm_a(execEnv_, setPlaybackSpeedFunc_, 1, results, 1, args);
+}
+
+void WasmDSP::setGrainLength(int length) {
+    if (!initialized_) return;
+    
+    wasm_val_t args[1] = {
+        { .kind = WASM_I32, .of = { .i32 = length } }
+    };
+    wasm_runtime_call_wasm_a(execEnv_, setGrainLengthFunc_, 0, nullptr, 1, args);
+}
+
+void WasmDSP::setGrainDensity(float density) {
+    if (!initialized_) return;
+    
+    wasm_val_t args[1] = {
+        { .kind = WASM_F32, .of = { .f32 = density } }
+    };
+    wasm_val_t results[1] = { { .kind = WASM_I32, .of = { .i32 = 0 } } };
+    wasm_runtime_call_wasm_a(execEnv_, setGrainDensityFunc_, 1, results, 1, args);
+}
+
+void WasmDSP::setFreeze(int value) {
+    if (!initialized_) return;
+    
+    wasm_val_t args[1] = {
+        { .kind = WASM_I32, .of = { .i32 = value } }
+    };
+    wasm_runtime_call_wasm_a(execEnv_, setFreezeFunc_, 0, nullptr, 1, args);
 }
 
 int WasmDSP::getSlotLength(int slot) {
@@ -448,6 +513,10 @@ void WasmDSP::shutdown() {
     processBlockFunc_ = nullptr;
     setBlendXFunc_ = nullptr;
     setBlendYFunc_ = nullptr;
+    setPlaybackSpeedFunc_ = nullptr;
+    setGrainLengthFunc_ = nullptr;
+    setGrainDensityFunc_ = nullptr;
+    setFreezeFunc_ = nullptr;
 
     leftInOffset_ = rightInOffset_ = leftOutOffset_ = rightOutOffset_ = 0;
     nativeLeftIn_ = nativeRightIn_ = nativeLeftOut_ = nativeRightOut_ = nullptr;

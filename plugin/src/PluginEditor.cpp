@@ -54,18 +54,14 @@ SunaAudioProcessorEditor::SunaAudioProcessorEditor(SunaAudioProcessor& p)
                 
                 int slot = static_cast<int>(params[0]);
                 audioProcessor.getWasmDSP().clearSlot(slot);
-                
-                juce::Logger::writeToLog("clearSlot: Cleared slot " + juce::String(slot));
                 complete(juce::var(true));
             })
             .withNativeFunction("playAll", [this](const auto& params, auto complete) {
                 audioProcessor.getWasmDSP().playAll();
-                juce::Logger::writeToLog("playAll: Triggered");
                 complete(juce::var(true));
             })
             .withNativeFunction("stopAll", [this](const auto& params, auto complete) {
                 audioProcessor.getWasmDSP().stopAll();
-                juce::Logger::writeToLog("stopAll: Triggered");
                 complete(juce::var(true));
             })
             .withNativeFunction("setBlendX", [this](const auto& params, auto complete) {
@@ -76,8 +72,6 @@ SunaAudioProcessorEditor::SunaAudioProcessorEditor(SunaAudioProcessor& p)
                 
                 float value = static_cast<float>(params[0]);
                 audioProcessor.getWasmDSP().setBlendX(value);
-                
-                juce::Logger::writeToLog("setBlendX: " + juce::String(value));
                 complete(juce::var(true));
             })
             .withNativeFunction("setBlendY", [this](const auto& params, auto complete) {
@@ -88,8 +82,46 @@ SunaAudioProcessorEditor::SunaAudioProcessorEditor(SunaAudioProcessor& p)
                 
                 float value = static_cast<float>(params[0]);
                 audioProcessor.getWasmDSP().setBlendY(value);
+                complete(juce::var(true));
+            })
+            .withNativeFunction("setPlaybackSpeed", [this](const auto& params, auto complete) {
+                if (params.size() < 1) {
+                    complete({});
+                    return;
+                }
                 
-                juce::Logger::writeToLog("setBlendY: " + juce::String(value));
+                float speed = static_cast<float>(params[0]);
+                audioProcessor.getWasmDSP().setPlaybackSpeed(speed);
+                complete(juce::var(true));
+            })
+            .withNativeFunction("setGrainLength", [this](const auto& params, auto complete) {
+                if (params.size() < 1) {
+                    complete({});
+                    return;
+                }
+                
+                int length = static_cast<int>(params[0]);
+                audioProcessor.getWasmDSP().setGrainLength(length);
+                complete(juce::var(true));
+            })
+            .withNativeFunction("setGrainDensity", [this](const auto& params, auto complete) {
+                if (params.size() < 1) {
+                    complete({});
+                    return;
+                }
+                
+                float density = static_cast<float>(params[0]);
+                audioProcessor.getWasmDSP().setGrainDensity(density);
+                complete(juce::var(true));
+            })
+            .withNativeFunction("setFreeze", [this](const auto& params, auto complete) {
+                if (params.size() < 1) {
+                    complete({});
+                    return;
+                }
+                
+                int value = static_cast<int>(params[0]);
+                audioProcessor.getWasmDSP().setFreeze(value);
                 complete(juce::var(true));
             }));
     

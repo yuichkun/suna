@@ -36,7 +36,6 @@ pub fn get_playback_speed() -> Float {
 ///|
 pub fn set_playback_speed(speed : Float) -> Unit {
   playback_speed.val = speed
-  println("playback_speed: \{speed}")
 }
 
 ///|
@@ -47,7 +46,6 @@ pub fn get_freeze() -> Bool {
 ///|
 pub fn set_freeze(value : Bool) -> Unit {
   freeze.val = value
-  println("freeze: \{value}")
 }
 
 ///|

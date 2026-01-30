@@ -68,7 +68,6 @@ pub fn update_gains() -> Unit {
 
   let x : Double = blend_x.val.to_double()
   let y : Double = blend_y.val.to_double()
-  println("blend: x=\{x}, y=\{y}")
 
   // Calculate weights based on distance to each slot position on unit circle
   let weights : Array[Double] = []
@@ -120,8 +119,6 @@ pub fn update_gains() -> Unit {
     }
     prev_slot_count.val = slot_count
   }
-
-  println("gains: \{target_gains}")
 }
 
 ///|
