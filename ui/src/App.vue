@@ -130,6 +130,7 @@ function getSlotData(index: number) {
             :x="rightStickX"
             :y="rightStickY"
             :is-connected="isConnected"
+            :slot-count="loadedBuffers.size"
           />
 
           <!-- Playback Controls -->

@@ -18,8 +18,9 @@ function pollGamepad(): void {
     const gamepad = gamepads[gamepadIndex]
     if (gamepad) {
       // Standard Mapping: axes[2] = right stick X, axes[3] = right stick Y
+      // Invert Y: gamepad up is -1, but we want up to be +1
       rightStickX.value = gamepad.axes[2] ?? 0
-      rightStickY.value = gamepad.axes[3] ?? 0
+      rightStickY.value = -(gamepad.axes[3] ?? 0)
     }
   }
 
