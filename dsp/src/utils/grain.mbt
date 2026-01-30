@@ -11,7 +11,7 @@ pub struct Grain {
 let grains : Array[Grain] = []
 
 ///| Global grain length in samples (controlled by UI)
-let grain_length : Ref[Int] = { val: 2048 }
+let grain_length : Ref[Int] = { val: 4224 }
 
 ///| LCG random seed
 let random_seed : Ref[Int] = { val: 12345 }

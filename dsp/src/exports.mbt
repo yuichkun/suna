@@ -49,3 +49,9 @@ pub fn set_playback_speed(speed : Float) -> Int {
   @utils.set_playback_speed(speed)
   0
 }
+
+///|
+pub fn set_grain_length(length : Int) -> Int {
+  @utils.set_grain_length(length)
+  0
+}
