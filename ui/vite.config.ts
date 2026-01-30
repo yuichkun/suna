@@ -1,14 +1,29 @@
 /// <reference types="vitest" />
-import { defineConfig } from 'vite'
+import { defineConfig, Plugin, ViteDevServer } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 
 const isWeb = process.env.VITE_RUNTIME === 'web'
 
+function watchPublicPlugin(): Plugin {
+  return {
+    name: 'watch-public',
+    configureServer(server: ViteDevServer) {
+      const publicDir = server.config.publicDir
+      server.watcher.add(publicDir)
+      server.watcher.on('all', (_event: string, filePath: string) => {
+        if (filePath.startsWith(publicDir)) {
+          server.ws.send({ type: 'full-reload' })
+        }
+      })
+    },
+  }
+}
+
 export default defineConfig({
   plugins: [
     vue(),
-    // Single-file mode for JUCE embedding
+    watchPublicPlugin(),
     ...(!isWeb ? [viteSingleFile()] : [])
   ],
   define: {
