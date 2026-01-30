@@ -107,19 +107,19 @@ test "test_process_stereo" {
   assert_eq(get_slot_playing(0), 1)
   
   // Process first sample - slot should still be playing
-  let (left1, right1) = process_sampler_stereo(0.0, 0.0)
+  let _ = process_sampler_stereo(0.0, 0.0)
   assert_eq(get_slot_playing(0), 1)
   
   // Process second sample - slot should still be playing
-  let (left2, right2) = process_sampler_stereo(0.0, 0.0)
+  let _ = process_sampler_stereo(0.0, 0.0)
   assert_eq(get_slot_playing(0), 1)
   
   // Process third sample - slot should still be playing
-  let (left3, right3) = process_sampler_stereo(0.0, 0.0)
+  let _ = process_sampler_stereo(0.0, 0.0)
   assert_eq(get_slot_playing(0), 1)
   
   // After third sample, playback should stop (reached end)
-  let (left4, right4) = process_sampler_stereo(0.0, 0.0)
+  let _ = process_sampler_stereo(0.0, 0.0)
   assert_eq(get_slot_playing(0), 0)
 }
 

@@ -158,8 +158,8 @@ fn get_slot_angle(slot : Int, total_slots : Int) -> Float {
   if total_slots <= 0 {
     return 0.0
   }
-  let angle_step = TWO_PI / total_slots.to_float()
-  PI / 2.0 - slot.to_float() * angle_step
+  let angle_step = TWO_PI / Float::from_int(total_slots)
+  PI / 2.0 - Float::from_int(slot) * angle_step
 }
 
 // Ensure gain slot exists for dynamic slot expansion
