@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { useParameter } from '../composables/useRuntime';
+import { useParameter, useRuntime } from '../composables/useRuntime';
 
 const props = defineProps<{
   parameterId: string
@@ -12,10 +12,12 @@ const props = defineProps<{
 const { normalizedValue, displayValue, setNormalizedValue } =
   useParameter(props.parameterId)
 
+// Get runtime for gesture calls
+const { runtime } = useRuntime()
+
 // Get parameter state for gesture calls
 const parameterState = computed(() => {
-  const { runtime } = useParameter(props.parameterId)
-  return runtime?.value?.getParameter(props.parameterId) ?? null
+  return runtime.value?.getParameter(props.parameterId) ?? null
 })
 
 // Custom drag state (matching kodama-vst KnobControl pattern)
