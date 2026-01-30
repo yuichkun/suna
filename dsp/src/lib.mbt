@@ -15,15 +15,18 @@ pub fn process_block(
   let _ = (state_ptr, left_in_ptr, right_in_ptr)
   let slot_count = @utils.get_slot_count()
   for i = 0; i < num_samples; i = i + 1 {
-    let offset = i * 4
+    let offset = i * @utils.float32_size
     let mut out : Float = 0.0
     for slot = 0; slot < slot_count; slot = slot + 1 {
       let pos = @utils.get_slot_play_pos(slot)
       let len = @utils.get_slot_sample_length(slot)
-      if pos.to_int() < len {
+      let pos_int = pos.to_int()
+      if pos_int < len {
         let ptr = @utils.get_slot_data_ptr(slot)
-        out = out + @utils.load_f32(ptr + pos.to_int() * 4)
-        @utils.set_slot_play_pos(slot, pos + 0.3)
+        let sample = @utils.load_f32(ptr + pos_int * @utils.float32_size)
+        let gain = @utils.get_slot_gain(slot)
+        out = out + sample * gain
+        @utils.set_slot_play_pos(slot, pos + 1.0)
       }
     }
     @utils.store_f32(left_out_ptr + offset, out)

@@ -10,7 +10,7 @@ priv struct SlotMeta {
 let slots : Array[SlotMeta] = []
 
 ///|
-let sample_rate : Ref[Float] = { val: 48000.0 }
+let sample_rate : Ref[Float] = { val: default_sample_rate }
 
 ///|
 pub fn get_sample_rate() -> Float {
@@ -47,6 +47,7 @@ pub fn load_sample_to_slot(slot : Int, data_ptr : Int, length : Int) -> Int {
   slots[slot].length = length
   slots[slot].play_pos = 0
   slots[slot].playing = 0
+  update_gains()
   0
 }
 
