@@ -31,8 +31,23 @@ class SunaProcessor extends AudioWorkletProcessor {
 
   async initWasm(wasmBytes) {
     try {
+      // Buffer for println output (flushes on newline)
+      let printBuffer = [];
+      const importObject = {
+        spectest: {
+          print_char: (charCode) => {
+            if (charCode === 10) {
+              console.log('[WASM]', printBuffer.map(c => String.fromCharCode(c)).join(''));
+              printBuffer = [];
+            } else {
+              printBuffer.push(charCode);
+            }
+          }
+        }
+      };
+
       const wasmModule = await WebAssembly.compile(wasmBytes);
-      const instance = await WebAssembly.instantiate(wasmModule, {});
+      const instance = await WebAssembly.instantiate(wasmModule, importObject);
       this.wasm = instance.exports;
 
       this.wasm.init_sampler(sampleRate);

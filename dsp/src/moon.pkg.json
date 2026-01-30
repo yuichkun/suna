@@ -1,21 +1,18 @@
 {
-  "is-main": true,
+  "is-main": false,
+  "import": [
+    "yuichkun/suna-dsp/src/utils"
+  ],
   "link": {
     "wasm": {
       "exports": [
-        "multiply",
-        "add",
-        "increment",
-        "get_counter",
-        "process_block",
         "init_sampler",
         "load_sample",
         "clear_slot",
         "play_all",
         "stop_all",
         "get_slot_length",
-        "get_slot_playing",
-        "process_sampler_stereo",
+        "process_block",
         "set_blend_x",
         "set_blend_y"
       ],
