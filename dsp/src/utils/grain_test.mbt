@@ -548,3 +548,27 @@ test "envelope never goes negative" {
     assert_eq(env >= 0.0, true)
   }
 }
+
+test "envelope returns 0 for negative position" {
+  let env1 = calculate_envelope(-1.0, 1000)
+  assert_eq(env1, 0.0)
+  
+  let env2 = calculate_envelope(-100.0, 1000)
+  assert_eq(env2, 0.0)
+}
+
+test "update_grain_position always uses positive delta" {
+  init_grain_pool()
+  load_sample_to_slot(0, 1000, 10000) |> ignore
+  set_grain_length(1000)
+  distribute_grains(1)
+  
+  // Grain starts at current_pos = 0
+  // Move it forward (lib.mbt now passes abs(speed))
+  update_grain_position(0, 10.0)
+  
+  // Should still be active
+  let grain = get_grain(0)
+  assert_eq(grain.active, 1)
+  assert_eq(grain.current_pos, 10.0)
+}

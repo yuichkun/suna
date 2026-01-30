@@ -31,6 +31,8 @@ pub fn process_block(
   }
   
   let speed = @utils.get_playback_speed()
+  let abs_speed = if speed < 0.0 { -speed } else { speed }
+  let reverse = speed < 0.0
   let grain_count = @utils.get_grain_count()
   
   for i = 0; i < num_samples; i = i + 1 {
@@ -55,9 +57,18 @@ pub fn process_block(
         continue
       }
       
-      // Read sample at grain position (start_pos + current_pos)
+      // Calculate position within grain (reverse if speed < 0)
+      let pos_in_grain = if reverse {
+        // Reverse: read from end to start
+        grain.length - 1 - grain.current_pos.to_int()
+      } else {
+        // Forward: read from start to end
+        grain.current_pos.to_int()
+      }
+      
+      // Read sample at grain position (start_pos + pos_in_grain)
       let ptr = @utils.get_slot_data_ptr(slot)
-      let pos_int = (grain.start_pos + grain.current_pos.to_int()) % slot_len
+      let pos_int = (grain.start_pos + pos_in_grain) % slot_len
       let sample = @utils.load_f32(ptr + pos_int * @utils.float32_size)
       
       // Apply grain envelope (smooths start/end to prevent clicks)
@@ -68,8 +79,8 @@ pub fn process_block(
       out = out + sample * envelope * gain
       active_count = active_count + 1
       
-      // Advance grain position by playback speed
-      @utils.update_grain_position(grain_idx, speed)
+      // Advance grain position by absolute speed (always positive)
+      @utils.update_grain_position(grain_idx, abs_speed)
       
       // Respawn grain if it finished (was deactivated by update_grain_position)
       if grain.active == 0 && slot_len > 0 {

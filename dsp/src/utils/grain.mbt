@@ -3,11 +3,11 @@ let total_grain_count : Int = 100
 
 ///|
 /// Envelope attack ratio (0.1 = 10% of grain length)
-let envelope_attack_ratio : Float = 0.04
+let envelope_attack_ratio : Float = 0.1
 
 ///|
 /// Envelope release ratio (0.1 = 10% of grain length)
-let envelope_release_ratio : Float = 0.04
+let envelope_release_ratio : Float = 0.1
 
 ///|
 /// Calculate trapezoidal envelope value for a grain
@@ -16,12 +16,14 @@ pub fn calculate_envelope(current_pos : Float, length : Int) -> Float {
   if length <= 0 {
     return 0.0
   }
+  
   let len_f = Float::from_int(length)
-
-  // Beyond grain length: return 0
-  if current_pos >= len_f {
+  
+  // Out of bounds: return 0
+  if current_pos < 0.0 || current_pos >= len_f {
     return 0.0
   }
+  
   let attack_samples = len_f * envelope_attack_ratio
   let release_start = len_f * (1.0 - envelope_release_ratio)
 
@@ -207,6 +209,7 @@ pub fn get_grain_count() -> Int {
 
 ///|
 /// Update grain current position (called during processing)
+/// Note: delta should always be positive (use absolute speed)
 pub fn update_grain_position(index : Int, delta : Float) -> Unit {
   if index < 0 || index >= grains.length() {
     return
