@@ -2,7 +2,7 @@
 priv struct SlotMeta {
   mut data_ptr : Int
   mut length : Int
-  mut play_pos : Int
+  mut play_pos : Float
   mut playing : Int
 }
 
@@ -104,7 +104,7 @@ pub fn get_slot_data_ptr(slot : Int) -> Int {
 }
 
 ///|
-pub fn get_slot_play_pos(slot : Int) -> Int {
+pub fn get_slot_play_pos(slot : Int) -> Float {
   if slot < 0 || slot >= slots.length() {
     return 0
   }
@@ -112,7 +112,7 @@ pub fn get_slot_play_pos(slot : Int) -> Int {
 }
 
 ///|
-pub fn set_slot_play_pos(slot : Int, pos : Int) -> Unit {
+pub fn set_slot_play_pos(slot : Int, pos : Float) -> Unit {
   if slot >= 0 && slot < slots.length() {
     slots[slot].play_pos = pos
   }
