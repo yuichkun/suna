@@ -20,7 +20,11 @@
         "set_blend_y"
       ],
       "heap-start-address": 65536,
-      "export-memory-name": "memory"
+      "export-memory-name": "memory",
+      "memory-limits": {
+        "min": 768,
+        "max": 1024
+      }
     }
   }
 }
