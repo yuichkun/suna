@@ -31,12 +31,30 @@ function extractMonoPCM(audioBuffer: AudioBuffer): Float32Array {
   return mono
 }
 
+function normalizeRMS(pcm: Float32Array, targetRMS: number = 0.1): Float32Array {
+  let sumSquares = 0
+  for (let i = 0; i < pcm.length; i++) {
+    sumSquares += pcm[i] * pcm[i]
+  }
+  const currentRMS = Math.sqrt(sumSquares / pcm.length)
+
+  if (currentRMS > 0.0001) {
+    const scale = targetRMS / currentRMS
+    for (let i = 0; i < pcm.length; i++) {
+      pcm[i] *= scale
+    }
+  }
+
+  return pcm
+}
+
 async function decodeAudioFile(file: File): Promise<{ pcmData: Float32Array; sampleRate: number; duration: number }> {
   const audioContext = new AudioContext()
   try {
     const arrayBuffer = await file.arrayBuffer()
     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
-    const pcmData = extractMonoPCM(audioBuffer)
+    const mono = extractMonoPCM(audioBuffer)
+    const pcmData = normalizeRMS(mono)
 
     return {
       pcmData,
