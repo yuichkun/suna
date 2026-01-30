@@ -65,7 +65,7 @@ pub fn init_grain_pool() -> Unit {
 }
 
 ///| Respawn a grain with random position within its slot
-fn respawn_grain(index : Int) -> Unit {
+pub fn respawn_grain(index : Int) -> Unit {
   if index < 0 || index >= grains.length() {
     return
   }
