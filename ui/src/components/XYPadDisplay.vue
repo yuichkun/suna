@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useRuntime } from '../composables/useRuntime'
 
 interface Props {
   x: number
@@ -12,9 +13,14 @@ const props = withDefaults(defineProps<Props>(), {
   slotCount: 0
 })
 
+const { runtime } = useRuntime()
+
 // Pad dimensions
 const PAD_SIZE = 200
 const RADIUS = PAD_SIZE / 2 - 10 // 90px radius for usable area
+
+// Drag state for gesture tracking
+const isDragging = ref(false)
 
 // Map x/y (-1 to 1) to pixel coordinates
 const cursorX = computed(() => {
@@ -41,6 +47,23 @@ const slotMarkers = computed(() => {
   }
   return markers
 })
+
+const onDragStart = () => {
+  isDragging.value = true
+  const blendXParam = runtime.value?.getParameter('blendX')
+  const blendYParam = runtime.value?.getParameter('blendY')
+  blendXParam?.sliderDragStarted?.()
+  blendYParam?.sliderDragStarted?.()
+}
+
+const onDragEnd = () => {
+  if (!isDragging.value) return
+  isDragging.value = false
+  const blendXParam = runtime.value?.getParameter('blendX')
+  const blendYParam = runtime.value?.getParameter('blendY')
+  blendXParam?.sliderDragEnded?.()
+  blendYParam?.sliderDragEnded?.()
+}
 </script>
 
 <template>
@@ -50,7 +73,15 @@ const slotMarkers = computed(() => {
       <span class="indicator-text">{{ isConnected ? 'Connected' : 'Disconnected' }}</span>
     </div>
     
-    <div class="xy-pad">
+    <div 
+      class="xy-pad"
+      @mousedown="onDragStart"
+      @touchstart="onDragStart"
+      @mouseup="onDragEnd"
+      @touchend="onDragEnd"
+      @mouseleave="onDragEnd"
+      @blur="onDragEnd"
+    >
       <!-- Circle boundary -->
       <div class="circle-boundary"></div>
       

@@ -9,8 +9,14 @@ const props = defineProps<{
 }>()
 
 // Match kodama-vst: only use normalizedValue, displayValue, setNormalizedValue
-const { normalizedValue, displayValue, setNormalizedValue,  } =
+const { normalizedValue, displayValue, setNormalizedValue } =
   useParameter(props.parameterId)
+
+// Get parameter state for gesture calls
+const parameterState = computed(() => {
+  const { runtime } = useParameter(props.parameterId)
+  return runtime?.value?.getParameter(props.parameterId) ?? null
+})
 
 // Custom drag state (matching kodama-vst KnobControl pattern)
 const isDragging = ref(false)
@@ -30,6 +36,7 @@ const onMouseDown = (e: MouseEvent) => {
   isDragging.value = true
   startX.value = e.clientX
   startValue.value = normalizedValue.value
+  parameterState.value?.sliderDragStarted?.()
   window.addEventListener('mousemove', onMouseMove)
   window.addEventListener('mouseup', onMouseUp)
 }
@@ -45,8 +52,16 @@ const onMouseMove = (e: MouseEvent) => {
 
 const onMouseUp = () => {
   isDragging.value = false
+  parameterState.value?.sliderDragEnded?.()
   window.removeEventListener('mousemove', onMouseMove)
   window.removeEventListener('mouseup', onMouseUp)
+}
+
+const onBlur = () => {
+  if (isDragging.value) {
+    isDragging.value = false
+    parameterState.value?.sliderDragEnded?.()
+  }
 }
 </script>
 
@@ -59,6 +74,7 @@ const onMouseUp = () => {
     <div 
       class="slider-track-container"
       @mousedown="onMouseDown"
+      @blur="onBlur"
     >
       <div class="slider-track">
         <div class="slider-fill" :style="{ width: `${fillPercent}%` }"></div>

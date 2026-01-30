@@ -85,33 +85,39 @@ export class WebRuntime implements AudioRuntime {
     this.workletNode?.port.postMessage({ type: 'setFreeze', freeze });
   }
 
-  getParameter(id: string): ParameterState | null {
-    const config = this.parameterConfigs[id];
-    if (!config) return null;
+   getParameter(id: string): ParameterState | null {
+     const config = this.parameterConfigs[id];
+     if (!config) return null;
 
-    return {
-      getNormalisedValue: () => {
-        const value = this.parameterValues[id] ?? 0;
-        return (value - config.start) / (config.end - config.start);
-      },
-      setNormalisedValue: (normalised: number) => {
-        const scaled = config.start + normalised * (config.end - config.start);
-        this.setParameter(id, scaled);
-      },
-      getScaledValue: () => this.parameterValues[id] ?? 0,
-      setScaledValue: (value: number) => this.setParameter(id, value),
-      properties: config,
-      onValueChanged: (callback: (value: number) => void) => {
-        if (!this.parameterCallbacks[id]) {
-          this.parameterCallbacks[id] = new Set();
-        }
-        this.parameterCallbacks[id].add(callback);
-        return () => {
-          this.parameterCallbacks[id]?.delete(callback);
-        };
-      },
-    };
-  }
+     return {
+       getNormalisedValue: () => {
+         const value = this.parameterValues[id] ?? 0;
+         return (value - config.start) / (config.end - config.start);
+       },
+       setNormalisedValue: (normalised: number) => {
+         const scaled = config.start + normalised * (config.end - config.start);
+         this.setParameter(id, scaled);
+       },
+       getScaledValue: () => this.parameterValues[id] ?? 0,
+       setScaledValue: (value: number) => this.setParameter(id, value),
+       properties: config,
+       onValueChanged: (callback: (value: number) => void) => {
+         if (!this.parameterCallbacks[id]) {
+           this.parameterCallbacks[id] = new Set();
+         }
+         this.parameterCallbacks[id].add(callback);
+         return () => {
+           this.parameterCallbacks[id]?.delete(callback);
+         };
+       },
+       sliderDragStarted: () => {
+         // Web runtime: no-op for now (could be extended for automation)
+       },
+       sliderDragEnded: () => {
+         // Web runtime: no-op for now (could be extended for automation)
+       },
+     };
+   }
 
   setParameter(id: string, value: number): void {
     this.parameterValues[id] = value;
