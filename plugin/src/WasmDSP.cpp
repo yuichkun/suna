@@ -144,11 +144,12 @@ bool WasmDSP::lookupFunctions() {
     setGrainLengthFunc_ = wasm_runtime_lookup_function(moduleInst_, "set_grain_length");
     setGrainDensityFunc_ = wasm_runtime_lookup_function(moduleInst_, "set_grain_density");
     setFreezeFunc_ = wasm_runtime_lookup_function(moduleInst_, "set_freeze");
+    setSpeedTargetFunc_ = wasm_runtime_lookup_function(moduleInst_, "set_speed_target");
 
     return initSamplerFunc_ && loadSampleFunc_ && clearSlotFunc_ &&
            playAllFunc_ && stopAllFunc_ && getSlotLengthFunc_ && processBlockFunc_ &&
            setBlendXFunc_ && setBlendYFunc_ && setPlaybackSpeedFunc_ &&
-           setGrainLengthFunc_ && setGrainDensityFunc_ && setFreezeFunc_;
+           setGrainLengthFunc_ && setGrainDensityFunc_ && setFreezeFunc_ && setSpeedTargetFunc_;
 }
 
 bool WasmDSP::allocateBuffers(int maxBlockSize) {
@@ -575,6 +576,22 @@ void WasmDSP::setFreeze(int value) {
     wasm_runtime_call_wasm_a(execEnv_, setFreezeFunc_, 1, results, 1, args);
 }
 
+void WasmDSP::setSpeedTarget(float target) {
+    if (!initialized_) return;
+    
+    static float lastLoggedTarget = -999.0f;
+    if (std::abs(target - lastLoggedTarget) > 0.01f) {
+        SUNA_LOG("SET_SPEED_TARGET: " + std::to_string(target));
+        lastLoggedTarget = target;
+    }
+    
+    wasm_val_t args[1] = {
+        { .kind = WASM_F32, .of = { .f32 = target } }
+    };
+    wasm_val_t results[1] = { { .kind = WASM_I32, .of = { .i32 = 0 } } };
+    wasm_runtime_call_wasm_a(execEnv_, setSpeedTargetFunc_, 1, results, 1, args);
+}
+
 int WasmDSP::getSlotLength(int slot) {
     if (!initialized_) return 0;
 
@@ -628,6 +645,7 @@ void WasmDSP::shutdown() {
     setGrainLengthFunc_ = nullptr;
     setGrainDensityFunc_ = nullptr;
     setFreezeFunc_ = nullptr;
+    setSpeedTargetFunc_ = nullptr;
 
     leftInOffset_ = rightInOffset_ = leftOutOffset_ = rightOutOffset_ = 0;
     nativeLeftIn_ = nativeRightIn_ = nativeLeftOut_ = nativeRightOut_ = nullptr;

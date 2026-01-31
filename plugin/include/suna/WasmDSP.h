@@ -57,6 +57,7 @@ public:
     void setGrainLength(int length);
     void setGrainDensity(float density);
     void setFreeze(int value);
+    void setSpeedTarget(float target);
 
     void shutdown();
 
@@ -83,6 +84,7 @@ private:
     wasm_function_inst_t setGrainLengthFunc_ = nullptr;
     wasm_function_inst_t setGrainDensityFunc_ = nullptr;
     wasm_function_inst_t setFreezeFunc_ = nullptr;
+    wasm_function_inst_t setSpeedTargetFunc_ = nullptr;
 
     uint32_t leftInOffset_ = 0;
     uint32_t rightInOffset_ = 0;

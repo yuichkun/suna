@@ -151,6 +151,17 @@ SunaAudioProcessorEditor::SunaAudioProcessorEditor(SunaAudioProcessor &p)
                                 int value = static_cast<int>(params[0]);
                                 audioProcessor.getWasmDSP().setFreeze(value);
                                 complete(juce::var(true));
+                              })
+          .withNativeFunction("setSpeedTarget",
+                              [this](const auto &params, auto complete) {
+                                if (params.size() < 1) {
+                                  complete({});
+                                  return;
+                                }
+
+                                float target = static_cast<float>(params[0]);
+                                audioProcessor.getWasmDSP().setSpeedTarget(target);
+                                complete(juce::var(true));
                               }));
 
   addAndMakeVisible(*browser);
