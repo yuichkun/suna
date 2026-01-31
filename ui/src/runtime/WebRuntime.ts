@@ -85,6 +85,10 @@ export class WebRuntime implements AudioRuntime {
     this.workletNode?.port.postMessage({ type: 'setFreeze', freeze });
   }
 
+  setSpeedTarget(target: number): void {
+    this.workletNode?.port.postMessage({ type: 'setSpeedTarget', target });
+  }
+
    getParameter(id: string): ParameterState | null {
      const config = this.parameterConfigs[id];
      if (!config) return null;

@@ -100,4 +100,9 @@ export class JuceRuntime implements AudioRuntime {
     if (typeof window === 'undefined' || !window.__JUCE__) return
     getNativeFunction('setFreeze')(freeze ? 1 : 0)
   }
+
+  setSpeedTarget(target: number): void {
+    if (typeof window === 'undefined' || !window.__JUCE__) return
+    getNativeFunction('setSpeedTarget')(target)
+  }
 }

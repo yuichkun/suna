@@ -37,6 +37,8 @@ class SunaProcessor extends AudioWorkletProcessor {
         this.handleSetGrainDensity(event.data.density);
       } else if (type === 'setFreeze') {
         this.handleSetFreeze(event.data.freeze);
+      } else if (type === 'setSpeedTarget') {
+        this.handleSetSpeedTarget(event.data.target);
       }
     };
   }
@@ -141,6 +143,11 @@ class SunaProcessor extends AudioWorkletProcessor {
   handleSetFreeze(freeze) {
     if (!this.wasm) return;
     this.wasm.set_freeze(freeze ? 1 : 0);
+  }
+
+  handleSetSpeedTarget(target) {
+    if (!this.wasm) return;
+    this.wasm.set_speed_target(target);
   }
 
   process(inputs, outputs) {
