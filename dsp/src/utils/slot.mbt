@@ -18,6 +18,15 @@ let playback_speed : Ref[Float] = { val: 1.0 }
 ///|
 let freeze : Ref[Bool] = { val: false }
 
+///| Target speed (set by set_speed_target, used for ramping)
+let target_speed : Ref[Float] = { val: 0.0 }
+
+///| Current speed (ramps toward target_speed)
+let current_speed : Ref[Float] = { val: 0.0 }
+
+///| Ramp step per sample (calculated when target changes)
+let speed_ramp_step : Ref[Float] = { val: 0.0 }
+
 ///|
 pub fn get_sample_rate() -> Float {
   sample_rate.val
@@ -150,4 +159,55 @@ pub fn set_slot_playing(slot : Int, playing : Int) -> Unit {
   if slot >= 0 && slot < slots.length() {
     slots[slot].playing = playing
   }
+}
+
+///| Set target speed and calculate ramp step
+pub fn set_speed_target(target : Float) -> Unit {
+  target_speed.val = target
+  // Calculate samples to reach target based on sample rate and ramp time
+  let ramp_time_samples = sample_rate.val * speed_ramp_time_ms / 1000.0
+  if ramp_time_samples > 0.0 {
+    // Calculate step to go from current to target
+    let diff = target - current_speed.val
+    speed_ramp_step.val = diff / ramp_time_samples
+  } else {
+    // Instant change if ramp time is 0
+    current_speed.val = target
+    speed_ramp_step.val = 0.0
+  }
+}
+
+///| Ramp current_speed toward target_speed (call once per sample)
+pub fn ramp_playback_speed() -> Unit {
+  if speed_ramp_step.val == 0.0 {
+    return
+  }
+  // Apply step
+  current_speed.val = current_speed.val + speed_ramp_step.val
+  // Check if reached or passed target
+  if speed_ramp_step.val > 0.0 {
+    // Ramping up
+    if current_speed.val >= target_speed.val {
+      current_speed.val = target_speed.val
+      speed_ramp_step.val = 0.0
+    }
+  } else {
+    // Ramping down
+    if current_speed.val <= target_speed.val {
+      current_speed.val = target_speed.val
+      speed_ramp_step.val = 0.0
+    }
+  }
+  // Update playback_speed to current (so lib.mbt uses ramped value)
+  playback_speed.val = current_speed.val
+}
+
+///| Get current speed (for testing)
+pub fn get_current_speed() -> Float {
+  current_speed.val
+}
+
+///| Get target speed (for testing)
+pub fn get_target_speed() -> Float {
+  target_speed.val
 }

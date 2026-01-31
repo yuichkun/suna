@@ -37,6 +37,8 @@ pub fn process_block(
   let reverse = speed < 0.0
   let active_grain_count = @utils.get_active_grain_count()
   for i = 0; i < num_samples; i = i + 1 {
+    // Ramp playback speed toward target (prevents clicks on trigger changes)
+    @utils.ramp_playback_speed()
     // Smooth gains toward target (prevents clicks on blend changes)
     @utils.smooth_gains()
     let offset = i * @utils.float32_size

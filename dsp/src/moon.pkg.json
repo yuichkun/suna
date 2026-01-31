@@ -18,7 +18,8 @@
          "set_playback_speed",
          "set_grain_length",
          "set_grain_density",
-         "set_freeze"
+         "set_freeze",
+         "set_speed_target"
        ],
       "heap-start-address": 65536,
       "export-memory-name": "memory",

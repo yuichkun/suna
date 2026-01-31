@@ -67,3 +67,9 @@ pub fn set_freeze(value : Int) -> Int {
   @utils.set_freeze(value != 0)
   0
 }
+
+///|
+pub fn set_speed_target(target : Float) -> Int {
+  @utils.set_speed_target(target)
+  0
+}

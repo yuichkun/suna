@@ -26,3 +26,10 @@ pub let envelope_release_ratio : Float = 0.1
 
 ///| Gain smoothing coefficient (0.01 = ~2.3ms at 44.1kHz)
 pub let gain_smooth_coeff : Float = 0.01
+
+// ============================================
+// Speed Ramp Constants
+// ============================================
+
+///| Speed ramp time in milliseconds
+pub let speed_ramp_time_ms : Float = 200.0
