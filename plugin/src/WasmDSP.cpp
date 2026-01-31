@@ -221,7 +221,17 @@ bool WasmDSP::allocateBuffers(int maxBlockSize) {
     std::memset(nativeRightOut_, 0, bufferBytes);
 
     maxBlockSize_ = maxBlockSize;
-    SUNA_LOG("WasmDSP::allocateBuffers() - Success, maxBlockSize=" + std::to_string(maxBlockSize));
+    
+    SUNA_LOG("ALLOC_BUFFERS: memBase=" + std::to_string(reinterpret_cast<uintptr_t>(memBase)) +
+             " leftInOff=" + std::to_string(leftInOffset_) +
+             " rightInOff=" + std::to_string(rightInOffset_) +
+             " leftOutOff=" + std::to_string(leftOutOffset_) +
+             " rightOutOff=" + std::to_string(rightOutOffset_));
+    SUNA_LOG("ALLOC_BUFFERS: SAMPLE_DATA_START=" + std::to_string(SAMPLE_DATA_START) +
+             " nativeSampleData=" + std::to_string(reinterpret_cast<uintptr_t>(nativeSampleData_)) +
+             " bufferBytes=" + std::to_string(bufferBytes) +
+             " maxBlockSize=" + std::to_string(maxBlockSize));
+    
     return true;
 }
 
@@ -359,12 +369,47 @@ void WasmDSP::processBlock(const float* leftIn, const float* rightIn,
         return;
     }
 
+    static int debugCounter = 0;
+    if (++debugCounter % 500 == 0) {
+        float maxSample = 0.0f;
+        for (int i = 0; i < numSamples; i++) {
+            float absVal = nativeLeftOut_[i] < 0 ? -nativeLeftOut_[i] : nativeLeftOut_[i];
+            if (absVal > maxSample) maxSample = absVal;
+        }
+        
+        std::string slotInfo = "";
+        for (int s = 0; s < 8; s++) {
+            slotInfo += "s" + std::to_string(s) + "=" + std::to_string(getSlotLength(s)) + " ";
+        }
+        
+        SUNA_LOG("DSP_OUT: peak=" + std::to_string(maxSample) + 
+                 " result=" + std::to_string(results[0].of.i32) +
+                 " | " + slotInfo);
+        
+        SUNA_LOG("DSP_ARGS: leftIn=" + std::to_string(leftInOffset_) +
+                 " rightIn=" + std::to_string(rightInOffset_) +
+                 " leftOut=" + std::to_string(leftOutOffset_) +
+                 " rightOut=" + std::to_string(rightOutOffset_) +
+                 " samples=" + std::to_string(numSamples));
+        
+        SUNA_LOG("DSP_PTR: nativeLeftOut=" + std::to_string(reinterpret_cast<uintptr_t>(nativeLeftOut_)) +
+                 " nativeSampleData=" + std::to_string(reinterpret_cast<uintptr_t>(nativeSampleData_)));
+    }
+
     std::memcpy(leftOut, nativeLeftOut_, copyBytes);
     std::memcpy(rightOut, nativeRightOut_, copyBytes);
 }
 
 void WasmDSP::loadSample(int slot, const float* data, int length) {
-    if (!initialized_ || !nativeSampleData_) return;
+    SUNA_LOG("LOAD_SAMPLE_START: slot=" + std::to_string(slot) + 
+             " length=" + std::to_string(length) +
+             " initialized=" + std::string(initialized_ ? "true" : "false") +
+             " nativeSampleData=" + std::to_string(reinterpret_cast<uintptr_t>(nativeSampleData_)));
+    
+    if (!initialized_ || !nativeSampleData_) {
+        SUNA_LOG("LOAD_SAMPLE_ABORT: not initialized or no sample data ptr");
+        return;
+    }
 
     constexpr int MAX_SAMPLES_PER_SLOT = 1440000;
     int copyLength = (length > MAX_SAMPLES_PER_SLOT) ? MAX_SAMPLES_PER_SLOT : length;
@@ -374,15 +419,34 @@ void WasmDSP::loadSample(int slot, const float* data, int length) {
 
     uint32_t dataPtr = SAMPLE_DATA_START + slotOffset * sizeof(float);
     
+    float firstSample = data[0];
+    float lastSample = data[copyLength - 1];
+    float maxInSample = 0.0f;
+    for (int i = 0; i < std::min(copyLength, 1000); i++) {
+        float absVal = data[i] < 0 ? -data[i] : data[i];
+        if (absVal > maxInSample) maxInSample = absVal;
+    }
+    
+    SUNA_LOG("LOAD_SAMPLE_DATA: slotOffset=" + std::to_string(slotOffset) +
+             " dataPtr=" + std::to_string(dataPtr) +
+             " copyLength=" + std::to_string(copyLength) +
+             " firstSample=" + std::to_string(firstSample) +
+             " lastSample=" + std::to_string(lastSample) +
+             " maxIn1000=" + std::to_string(maxInSample));
+    
     wasm_val_t args[3] = {
         { .kind = WASM_I32, .of = { .i32 = slot } },
         { .kind = WASM_I32, .of = { .i32 = static_cast<int32_t>(dataPtr) } },
         { .kind = WASM_I32, .of = { .i32 = copyLength } }
     };
-    wasm_val_t results[1] = { { .kind = WASM_I32, .of = { .i32 = 0 } } };
-    wasm_runtime_call_wasm_a(execEnv_, loadSampleFunc_, 1, results, 3, args);
+    wasm_val_t results[1] = { { .kind = WASM_I32, .of = { .i32 = -999 } } };
+    bool success = wasm_runtime_call_wasm_a(execEnv_, loadSampleFunc_, 1, results, 3, args);
     
-    SUNA_LOG("loadSample: Loaded " + std::to_string(copyLength) + " samples into slot " + std::to_string(slot));
+    int slotLenAfter = getSlotLength(slot);
+    
+    SUNA_LOG("LOAD_SAMPLE_RESULT: success=" + std::string(success ? "true" : "false") +
+             " wasmResult=" + std::to_string(results[0].of.i32) +
+             " slotLengthAfter=" + std::to_string(slotLenAfter));
 }
 
 void WasmDSP::clearSlot(int slot) {
@@ -395,17 +459,34 @@ void WasmDSP::clearSlot(int slot) {
 }
 
 void WasmDSP::playAll() {
-    if (!initialized_) return;
+    SUNA_LOG("PLAY_ALL called");
+    if (!initialized_) {
+        SUNA_LOG("PLAY_ALL aborted: not initialized");
+        return;
+    }
     wasm_runtime_call_wasm_a(execEnv_, playAllFunc_, 0, nullptr, 0, nullptr);
+    
+    std::string slotInfo = "";
+    for (int s = 0; s < 8; s++) {
+        slotInfo += "s" + std::to_string(s) + "=" + std::to_string(getSlotLength(s)) + " ";
+    }
+    SUNA_LOG("PLAY_ALL done, slots: " + slotInfo);
 }
 
 void WasmDSP::stopAll() {
+    SUNA_LOG("STOP_ALL called");
     if (!initialized_) return;
     wasm_runtime_call_wasm_a(execEnv_, stopAllFunc_, 0, nullptr, 0, nullptr);
 }
 
 void WasmDSP::setBlendX(float value) {
     if (!initialized_) return;
+    
+    static float lastLoggedX = -999.0f;
+    if (std::abs(value - lastLoggedX) > 0.01f) {
+        SUNA_LOG("SET_BLEND_X: " + std::to_string(value));
+        lastLoggedX = value;
+    }
     
     wasm_val_t args[1] = {
         { .kind = WASM_F32, .of = { .f32 = value } }
@@ -417,6 +498,12 @@ void WasmDSP::setBlendX(float value) {
 void WasmDSP::setBlendY(float value) {
     if (!initialized_) return;
     
+    static float lastLoggedY = -999.0f;
+    if (std::abs(value - lastLoggedY) > 0.01f) {
+        SUNA_LOG("SET_BLEND_Y: " + std::to_string(value));
+        lastLoggedY = value;
+    }
+    
     wasm_val_t args[1] = {
         { .kind = WASM_F32, .of = { .f32 = value } }
     };
@@ -426,6 +513,12 @@ void WasmDSP::setBlendY(float value) {
 
 void WasmDSP::setPlaybackSpeed(float speed) {
     if (!initialized_) return;
+    
+    static float lastLoggedSpeed = -999.0f;
+    if (std::abs(speed - lastLoggedSpeed) > 0.01f) {
+        SUNA_LOG("SET_SPEED: " + std::to_string(speed));
+        lastLoggedSpeed = speed;
+    }
     
     wasm_val_t args[1] = {
         { .kind = WASM_F32, .of = { .f32 = speed } }
@@ -437,14 +530,27 @@ void WasmDSP::setPlaybackSpeed(float speed) {
 void WasmDSP::setGrainLength(int length) {
     if (!initialized_) return;
     
+    static int lastLoggedLen = -999;
+    if (length != lastLoggedLen) {
+        SUNA_LOG("SET_GRAIN_LEN: " + std::to_string(length));
+        lastLoggedLen = length;
+    }
+    
     wasm_val_t args[1] = {
         { .kind = WASM_I32, .of = { .i32 = length } }
     };
-    wasm_runtime_call_wasm_a(execEnv_, setGrainLengthFunc_, 0, nullptr, 1, args);
+    wasm_val_t results[1] = { { .kind = WASM_I32, .of = { .i32 = 0 } } };
+    wasm_runtime_call_wasm_a(execEnv_, setGrainLengthFunc_, 1, results, 1, args);
 }
 
 void WasmDSP::setGrainDensity(float density) {
     if (!initialized_) return;
+    
+    static float lastLoggedDensity = -999.0f;
+    if (std::abs(density - lastLoggedDensity) > 0.001f) {
+        SUNA_LOG("SET_DENSITY: " + std::to_string(density));
+        lastLoggedDensity = density;
+    }
     
     wasm_val_t args[1] = {
         { .kind = WASM_F32, .of = { .f32 = density } }
@@ -456,10 +562,17 @@ void WasmDSP::setGrainDensity(float density) {
 void WasmDSP::setFreeze(int value) {
     if (!initialized_) return;
     
+    static int lastLoggedFreeze = -999;
+    if (value != lastLoggedFreeze) {
+        SUNA_LOG("SET_FREEZE: " + std::to_string(value));
+        lastLoggedFreeze = value;
+    }
+    
     wasm_val_t args[1] = {
         { .kind = WASM_I32, .of = { .i32 = value } }
     };
-    wasm_runtime_call_wasm_a(execEnv_, setFreezeFunc_, 0, nullptr, 1, args);
+    wasm_val_t results[1] = { { .kind = WASM_I32, .of = { .i32 = 0 } } };
+    wasm_runtime_call_wasm_a(execEnv_, setFreezeFunc_, 1, results, 1, args);
 }
 
 int WasmDSP::getSlotLength(int slot) {

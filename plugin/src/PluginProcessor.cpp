@@ -56,10 +56,20 @@ void SunaAudioProcessor::releaseResources()
 void SunaAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
     static bool firstCall = true;
+    static int paramLogCounter = 0;
     if (firstCall) {
         juce::Logger::writeToLog("SunaAudioProcessor::processBlock - First call with " + 
             juce::String(buffer.getNumSamples()) + " samples");
         firstCall = false;
+    }
+    
+    if (++paramLogCounter % 500 == 0) {
+        juce::Logger::writeToLog("PARAMS: density=" + juce::String(grainDensityParam_->load(), 4) +
+            " speed=" + juce::String(playbackSpeedParam_->load(), 4) +
+            " grainLen=" + juce::String(grainLengthParam_->load(), 1) +
+            " freeze=" + juce::String(freezeParam_->load(), 1) +
+            " blendX=" + juce::String(blendXParam_->load(), 4) +
+            " blendY=" + juce::String(blendYParam_->load(), 4));
     }
     
     juce::ScopedNoDenormals noDenormals;
@@ -68,14 +78,6 @@ void SunaAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
         buffer.clear();
         return;
     }
-
-    // Read all parameters and update DSP
-    wasmDSP_.setBlendX(blendXParam_->load());
-    wasmDSP_.setBlendY(blendYParam_->load());
-    wasmDSP_.setPlaybackSpeed(playbackSpeedParam_->load());
-    wasmDSP_.setGrainLength(static_cast<int>(grainLengthParam_->load()));
-    wasmDSP_.setGrainDensity(grainDensityParam_->load());
-    wasmDSP_.setFreeze(freezeParam_->load() > 0.5f ? 1 : 0);
 
     // Clear buffer since we have no input bus
     buffer.clear();
