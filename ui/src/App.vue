@@ -56,7 +56,7 @@ function getSlotData(index: number) {
 </script>
 
 <template>
-  <div class="app">
+  <div class="app" :class="[`trigger-${triggerState}`]">
     <header class="header">
       <div class="logo">
         <span class="logo-text">SUNA</span>
@@ -75,18 +75,12 @@ function getSlotData(index: number) {
     <template v-else>
       <main class="sampler-container">
         <!-- Drop Zone -->
-        <div
-          class="drop-zone"
-          :class="{ 'drag-over': isDragging }"
-          @dragover.prevent
-          @dragenter.prevent="isDragging = true"
-          @dragleave.prevent="isDragging = false"
-          @drop.prevent="onDrop"
-        >
+        <div class="drop-zone" :class="{ 'drag-over': isDragging }" @dragover.prevent
+          @dragenter.prevent="isDragging = true" @dragleave.prevent="isDragging = false" @drop.prevent="onDrop">
           <div class="drop-zone-content">
             <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M12 4v12m0 0l-4-4m4 4l4-4" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12 4v12m0 0l-4-4m4 4l4-4" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
             <span class="drop-text">Drop audio files</span>
             <span class="drop-hint">WAV, MP3, OGG, FLAC</span>
@@ -95,25 +89,17 @@ function getSlotData(index: number) {
 
         <!-- Buffer List -->
         <div class="buffer-list">
-          <div
-            v-for="index in MAX_SAMPLES"
-            :key="index - 1"
-            class="buffer-slot"
-            :class="{ 'slot-filled': getSlotData(index - 1) }"
-          >
+          <div v-for="index in MAX_SAMPLES" :key="index - 1" class="buffer-slot"
+            :class="{ 'slot-filled': getSlotData(index - 1) }">
             <span class="slot-index">{{ index }}</span>
             <template v-if="getSlotData(index - 1)">
               <div class="slot-content">
                 <WaveformCanvas :pcm-data="getSlotData(index - 1)?.pcmData ?? null" />
                 <span class="slot-name">{{ getSlotData(index - 1)?.fileName }}</span>
               </div>
-              <button
-                class="slot-delete"
-                @click="handleClearSlot(index - 1)"
-                title="Remove sample"
-              >
+              <button class="slot-delete" @click="handleClearSlot(index - 1)" title="Remove sample">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </button>
             </template>
@@ -122,51 +108,33 @@ function getSlotData(index: number) {
         </div>
 
         <!-- Controls Row: XYPads + Playback -->
-         <div class="controls-row">
-           <!-- Left Stick: Speed Control -->
-           <div class="pad-group">
-             <span class="pad-label">SPEED</span>
-             <XYPadDisplay
-               :x="leftStickX"
-               :y="leftStickY"
-               :is-connected="isConnected"
-             />
-             <span class="pad-value">{{ grainLength }} samples</span>
-           </div>
+        <div class="controls-row">
+          <!-- Left Stick: Speed Control -->
+          <div class="pad-group">
+            <span class="pad-label">SPEED</span>
+            <XYPadDisplay :x="leftStickX" :y="leftStickY" :is-connected="isConnected" />
+            <span class="pad-value">{{ grainLength }} samples</span>
+          </div>
 
           <!-- Right Stick: Blend Control -->
           <div class="pad-group">
             <span class="pad-label">BLEND</span>
-            <XYPadDisplay
-              :x="rightStickX"
-              :y="rightStickY"
-              :is-connected="isConnected"
-              :slot-count="loadedBuffers.size"
-            />
-          </div>
-
-          <!-- Trigger Indicator -->
-          <div class="pad-group">
-            <span class="pad-label">TRIGGER</span>
-            <div class="trigger-indicator" :class="triggerState">
-              <span class="trigger-text">{{ triggerState.toUpperCase() }}</span>
-            </div>
-            <span class="pad-value">LT / RT</span>
+            <XYPadDisplay :x="rightStickX" :y="rightStickY" :is-connected="isConnected"
+              :slot-count="loadedBuffers.size" />
           </div>
         </div>
+
+        <span class="runtime-badge" :class="{ juce: !isWeb }">
+          {{ isWeb ? 'WEB' : 'JUCE' }}
+        </span>
       </main>
     </template>
-
-    <footer class="footer">
-      <span class="runtime-badge" :class="{ juce: !isWeb }">
-        {{ isWeb ? 'WEB' : 'JUCE' }}
-      </span>
-    </footer>
   </div>
 </template>
 
 <style scoped>
 .app {
+
   --bg-primary: #0a0a0f;
   --bg-secondary: #12121a;
   --bg-tertiary: #1a1a24;
@@ -182,15 +150,22 @@ function getSlotData(index: number) {
 
   min-height: 100vh;
   background: var(--bg-primary);
-  background-image:
-    radial-gradient(ellipse at 30% 0%, rgba(255, 107, 74, 0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 100%, rgba(255, 107, 74, 0.03) 0%, transparent 50%),
-    linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
   display: flex;
   flex-direction: column;
   padding: 28px 20px;
   margin: 0 auto;
   font-family: 'IBM Plex Mono', 'Fira Code', 'SF Mono', monospace;
+  transition: background-color 0.1s ease;
+}
+
+/* Trigger state: ON - Orange tint */
+.app.trigger-on {
+  background: #1a120f;
+}
+
+/* Trigger state: FREEZE - Blue tint */
+.app.trigger-freeze {
+  background: #0f1318;
 }
 
 .header {
@@ -224,10 +199,10 @@ function getSlotData(index: number) {
 
 .sampler-container {
   display: flex;
-  width: 500px;
+  width: 540px;
   margin: 0 auto;
   flex-direction: column;
-  gap: 16px;
+  gap: 36px;
   flex: 1;
 }
 
@@ -236,7 +211,7 @@ function getSlotData(index: number) {
   position: relative;
   border: 1px dashed var(--border-hover);
   border-radius: 8px;
-  padding: 28px 20px;
+  padding: 16px 20px;
   background: var(--bg-secondary);
   transition: all 0.2s ease;
   cursor: pointer;
@@ -306,8 +281,8 @@ function getSlotData(index: number) {
 
 /* Buffer List */
 .buffer-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 4px;
   background: var(--bg-secondary);
   border-radius: 8px;
@@ -318,12 +293,13 @@ function getSlotData(index: number) {
 .buffer-slot {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 6px;
+  padding: 8px 10px;
   border-radius: 4px;
   background: var(--bg-primary);
   border: 1px solid transparent;
   transition: all 0.15s ease;
+  min-width: 0;
 }
 
 .buffer-slot.slot-filled {
@@ -350,8 +326,9 @@ function getSlotData(index: number) {
 
 .slot-content {
   flex: 1;
+  min-width: 0;
   position: relative;
-  height: 32px;
+  height: 28px;
   display: flex;
   align-items: center;
   overflow: hidden;
@@ -432,51 +409,10 @@ function getSlotData(index: number) {
   margin-top: 4px;
 }
 
-/* Trigger Indicator */
-.trigger-indicator {
-  width: 60px;
-  height: 24px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.1s ease;
-}
-
-.trigger-indicator.on {
-  background: var(--accent);
-  border-color: var(--accent);
-  box-shadow: 0 0 12px var(--accent-glow);
-}
-
-.trigger-indicator.freeze {
-  background: #4a9eff;
-  border-color: #4a9eff;
-  box-shadow: 0 0 12px rgba(74, 158, 255, 0.4);
-}
-
-.trigger-text {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
-}
-
-.trigger-indicator.on .trigger-text,
-.trigger-indicator.freeze .trigger-text {
-  color: var(--bg-primary);
-}
-
-/* Footer */
-.footer {
-  display: flex;
-  justify-content: center;
-  margin-top: 24px;
-}
-
+/* Runtime Badge */
 .runtime-badge {
+  align-self: center;
+  margin-top: 24px;
   font-size: 8px;
   font-weight: 600;
   letter-spacing: 0.2em;
