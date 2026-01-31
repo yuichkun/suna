@@ -125,12 +125,15 @@ export function useGamepad() {
       if (newState === 'off') {
         runtime.value?.setGrainDensity?.(0.0)
         runtime.value?.setFreeze?.(false)
+        runtime.value?.setSpeedTarget?.(0.0)
       } else if (newState === 'on') {
         runtime.value?.setGrainDensity?.(1.0)
         runtime.value?.setFreeze?.(false)
+        runtime.value?.setSpeedTarget?.(1.0)
       } else {
         runtime.value?.setGrainDensity?.(1.0)
         runtime.value?.setFreeze?.(true)
+        runtime.value?.setSpeedTarget?.(1.0)
       }
     }
   })
