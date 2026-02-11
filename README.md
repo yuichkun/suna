@@ -1,7 +1,7 @@
 # suna
 
 <p align="center">
-  <img src="docs/screenshot.png" alt="suna delay plugin" width="600">
+  <img src="docs/screenshot.gif" alt="suna delay plugin" width="600">
 </p>
 
 A delay effect VST3/AU plugin with MoonBit DSP compiled to WebAssembly, running via WAMR in JUCE.
