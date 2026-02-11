@@ -15,15 +15,14 @@ echo "=== Building MoonBit DSP ==="
 cd "$DSP_DIR"
 moon build --target wasm
 
-# Search both new (_build) and old (target) MoonBit output paths
-if [ -d "_build/wasm-gc/release/build" ]; then
-  WASM_FILE=$(find _build/wasm-gc/release/build -name "*.wasm" -type f | head -1)
-else
-  WASM_FILE=$(find target/wasm -name "*.wasm" -type f 2>/dev/null | head -1)
+# Search for WASM output in _build (current MoonBit) or target (legacy)
+WASM_FILE=$(find _build -name "*.wasm" -type f 2>/dev/null | head -1)
+if [ -z "$WASM_FILE" ]; then
+  WASM_FILE=$(find target -name "*.wasm" -type f 2>/dev/null | head -1)
 fi
 if [ -z "$WASM_FILE" ]; then
   echo "ERROR: MoonBit build failed - no .wasm file found"
-  echo "Searched: _build/wasm-gc/release/build and target/wasm"
+  echo "Searched: _build/ and target/"
   exit 1
 fi
 echo "Found WASM: $WASM_FILE"
