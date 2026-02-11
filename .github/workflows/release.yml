@@ -1,0 +1,118 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  SUNA_VERSION: ${{ github.ref_name }}
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup MoonBit
+        uses: hustcer/setup-moonbit@v1
+
+      - name: Build MoonBit DSP
+        run: cd dsp && moon build --target wasm
+
+      - name: Find and copy WASM output
+        run: |
+          cd dsp
+          if [ -d "_build/wasm-gc/release/build" ]; then
+            WASM_FILE=$(find _build/wasm-gc/release/build -name "*.wasm" -type f | head -1)
+          else
+            WASM_FILE=$(find target/wasm -name "*.wasm" -type f 2>/dev/null | head -1)
+          fi
+          if [ -z "$WASM_FILE" ]; then
+            echo "ERROR: MoonBit build failed - no .wasm file found"
+            exit 1
+          fi
+          echo "Found WASM: $WASM_FILE"
+          mkdir -p ../ui/public/wasm
+          cp "$WASM_FILE" ../ui/public/wasm/suna_dsp.wasm
+
+      - name: Install build tools
+        run: brew install ccache ninja && pip3 install requests --break-system-packages
+
+      - name: Cache LLVM
+        id: cache-llvm
+        uses: actions/cache@v5
+        with:
+          path: |
+            libs/wamr/core/deps/llvm/build/bin
+            libs/wamr/core/deps/llvm/build/include
+            libs/wamr/core/deps/llvm/build/lib
+            libs/wamr/core/deps/llvm/build/libexec
+            libs/wamr/core/deps/llvm/build/share
+          key: llvm-macos-arm-${{ hashFiles('.gitmodules') }}
+
+      - name: Build LLVM
+        if: steps.cache-llvm.outputs.cache-hit != 'true'
+        run: cd libs/wamr/wamr-compiler && ./build_llvm.sh
+
+      - name: Build wamrc
+        run: |
+          cd libs/wamr/wamr-compiler
+          mkdir -p build && cd build
+          cmake .. -DWAMR_BUILD_PLATFORM=darwin
+          make -j$(sysctl -n hw.ncpu)
+
+      - name: Build libiwasm
+        run: |
+          cd libs/wamr/product-mini/platforms/darwin
+          mkdir -p build && cd build
+          cmake .. -DWAMR_DISABLE_HW_BOUND_CHECK=1
+          make -j$(sysctl -n hw.ncpu)
+
+      - name: AOT compile WASM
+        run: |
+          mkdir -p plugin/resources
+          libs/wamr/wamr-compiler/build/wamrc --opt-level=3 -o plugin/resources/suna_dsp.aot ui/public/wasm/suna_dsp.wasm
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install UI dependencies
+        run: cd ui && npm ci
+
+      - name: Build UI
+        run: cd ui && npm run build
+
+      - name: Build JUCE plugin
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release
+
+      - name: Build macOS installer
+        run: ./scripts/build-installer-macos.sh
+
+      - name: Upload macOS installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-installer
+          path: installer/*.pkg
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build-macos]
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**/*.pkg
