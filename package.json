@@ -11,6 +11,9 @@
     "build:dsp": "bash scripts/build-dsp.sh",
     "build:plugin": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release",
     "release:web": "npm run build:dsp && cd ui && npm run build:web",
-    "release:vst": "npm run build:dsp && cd ui && npm run build && cd .. && npm run build:plugin"
+    "release:vst": "npm run build:dsp && cd ui && npm run build && cd .. && npm run build:plugin",
+    "clean": "rm -rf build/ installer/",
+    "clean:plugins": "rm -rf ~/Library/Audio/Plug-Ins/VST3/Suna.vst3 ~/Library/Audio/Plug-Ins/Components/Suna.component ~/Library/Caches/AudioUnitCache",
+    "clean:all": "npm run clean && npm run clean:plugins"
   }
 }
