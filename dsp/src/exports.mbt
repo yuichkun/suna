@@ -2,6 +2,9 @@
 pub fn init_sampler(sr : Float) -> Int {
   @utils.set_sample_rate(sr)
   @utils.init_slots()
+  @utils.init_grain_pool()
+  grain_pool_initialized.val = true
+  previous_slot_count.val = @utils.get_slot_count()
   0
 }
 

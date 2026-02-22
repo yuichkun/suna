@@ -152,6 +152,36 @@ bool WasmDSP::lookupFunctions() {
            setGrainLengthFunc_ && setGrainDensityFunc_ && setFreezeFunc_ && setSpeedTargetFunc_;
 }
 
+bool WasmDSP::refreshMemoryBase() {
+    if (!moduleInst_) {
+        return false;
+    }
+
+    uint8_t* memBase = static_cast<uint8_t*>(
+        wasm_runtime_addr_app_to_native(moduleInst_, 0));
+    if (!memBase) {
+        SUNA_LOG("WasmDSP::refreshMemoryBase() - Failed: memBase is null");
+        return false;
+    }
+
+    if (memBase != memBase_) {
+        memBase_ = memBase;
+        if (prepared_.load() && maxBlockSize_ > 0) {
+            nativeLeftIn_ = reinterpret_cast<float*>(memBase_ + leftInOffset_);
+            nativeRightIn_ = reinterpret_cast<float*>(memBase_ + rightInOffset_);
+            nativeLeftOut_ = reinterpret_cast<float*>(memBase_ + leftOutOffset_);
+            nativeRightOut_ = reinterpret_cast<float*>(memBase_ + rightOutOffset_);
+        }
+        if (prepared_.load() || nativeSampleData_ != nullptr) {
+            nativeSampleData_ = reinterpret_cast<float*>(memBase_ + SAMPLE_DATA_START);
+        }
+        SUNA_LOG("WasmDSP: memory base updated to " +
+                 std::to_string(reinterpret_cast<uintptr_t>(memBase_)));
+    }
+
+    return true;
+}
+
 bool WasmDSP::allocateBuffers(int maxBlockSize) {
     uint32_t bufferBytes = static_cast<uint32_t>(maxBlockSize) * sizeof(float);
 
@@ -161,6 +191,7 @@ bool WasmDSP::allocateBuffers(int maxBlockSize) {
         SUNA_LOG("WasmDSP::allocateBuffers() - Failed: memBase is null");
         return false;
     }
+    memBase_ = memBase;
 
     /*
      * WASM Linear Memory Layout for MoonBit DSP
@@ -240,6 +271,11 @@ void WasmDSP::prepareToPlay(double sampleRate, int maxBlockSize) {
     SUNA_LOG("WasmDSP::prepareToPlay() - sampleRate=" + std::to_string(sampleRate) + " blockSize=" + std::to_string(maxBlockSize));
     if (!initialized_) {
         SUNA_LOG("WasmDSP::prepareToPlay() - Aborted: not initialized");
+        return;
+    }
+
+    std::lock_guard<std::recursive_mutex> lock(wasmMutex_);
+    if (!refreshMemoryBase()) {
         return;
     }
 
@@ -348,6 +384,26 @@ void WasmDSP::processBlock(const float* leftIn, const float* rightIn,
         return;
     }
 
+    std::unique_lock<std::recursive_mutex> lock(wasmMutex_, std::try_to_lock);
+    if (!lock.owns_lock()) {
+        static bool lockContentionLogged = false;
+        if (!lockContentionLogged) {
+            SUNA_LOG("WasmDSP::processBlock() - Skipping block: WASM busy");
+            lockContentionLogged = true;
+        }
+        size_t copyBytes = static_cast<size_t>(numSamples) * sizeof(float);
+        std::memset(leftOut, 0, copyBytes);
+        std::memset(rightOut, 0, copyBytes);
+        return;
+    }
+
+    if (!refreshMemoryBase()) {
+        size_t copyBytes = static_cast<size_t>(numSamples) * sizeof(float);
+        std::memset(leftOut, 0, copyBytes);
+        std::memset(rightOut, 0, copyBytes);
+        return;
+    }
+
     size_t copyBytes = static_cast<size_t>(numSamples) * sizeof(float);
 
     wasm_val_t args[6] = {
@@ -365,6 +421,13 @@ void WasmDSP::processBlock(const float* leftIn, const float* rightIn,
         const char* exception = wasm_runtime_get_exception(moduleInst_);
         SUNA_LOG(std::string("WASM call failed: ") + (exception ? exception : "unknown error"));
         
+        std::memset(leftOut, 0, copyBytes);
+        std::memset(rightOut, 0, copyBytes);
+        return;
+    }
+
+    if (!refreshMemoryBase() || !nativeLeftOut_ || !nativeRightOut_) {
+        SUNA_LOG("WasmDSP::processBlock() - Failed: output buffers unavailable");
         std::memset(leftOut, 0, copyBytes);
         std::memset(rightOut, 0, copyBytes);
         return;
@@ -407,8 +470,14 @@ void WasmDSP::loadSample(int slot, const float* data, int length) {
              " initialized=" + std::string(initialized_ ? "true" : "false") +
              " nativeSampleData=" + std::to_string(reinterpret_cast<uintptr_t>(nativeSampleData_)));
     
-    if (!initialized_ || !nativeSampleData_) {
-        SUNA_LOG("LOAD_SAMPLE_ABORT: not initialized or no sample data ptr");
+    if (!initialized_) {
+        SUNA_LOG("LOAD_SAMPLE_ABORT: not initialized");
+        return;
+    }
+
+    std::lock_guard<std::recursive_mutex> lock(wasmMutex_);
+    if (!refreshMemoryBase() || !nativeSampleData_) {
+        SUNA_LOG("LOAD_SAMPLE_ABORT: no sample data ptr");
         return;
     }
 
@@ -442,6 +511,7 @@ void WasmDSP::loadSample(int slot, const float* data, int length) {
     };
     wasm_val_t results[1] = { { .kind = WASM_I32, .of = { .i32 = -999 } } };
     bool success = wasm_runtime_call_wasm_a(execEnv_, loadSampleFunc_, 1, results, 3, args);
+    refreshMemoryBase();
     
     int slotLenAfter = getSlotLength(slot);
     
@@ -452,6 +522,8 @@ void WasmDSP::loadSample(int slot, const float* data, int length) {
 
 void WasmDSP::clearSlot(int slot) {
     if (!initialized_) return;
+
+    std::lock_guard<std::recursive_mutex> lock(wasmMutex_);
 
     wasm_val_t args[1] = {
         { .kind = WASM_I32, .of = { .i32 = slot } }
@@ -465,6 +537,8 @@ void WasmDSP::playAll() {
         SUNA_LOG("PLAY_ALL aborted: not initialized");
         return;
     }
+
+    std::lock_guard<std::recursive_mutex> lock(wasmMutex_);
     wasm_runtime_call_wasm_a(execEnv_, playAllFunc_, 0, nullptr, 0, nullptr);
     
     std::string slotInfo = "";
@@ -477,11 +551,15 @@ void WasmDSP::playAll() {
 void WasmDSP::stopAll() {
     SUNA_LOG("STOP_ALL called");
     if (!initialized_) return;
+
+    std::lock_guard<std::recursive_mutex> lock(wasmMutex_);
     wasm_runtime_call_wasm_a(execEnv_, stopAllFunc_, 0, nullptr, 0, nullptr);
 }
 
 void WasmDSP::setBlendX(float value) {
     if (!initialized_) return;
+
+    std::lock_guard<std::recursive_mutex> lock(wasmMutex_);
     
     static float lastLoggedX = -999.0f;
     if (std::abs(value - lastLoggedX) > 0.01f) {
@@ -498,6 +576,8 @@ void WasmDSP::setBlendX(float value) {
 
 void WasmDSP::setBlendY(float value) {
     if (!initialized_) return;
+
+    std::lock_guard<std::recursive_mutex> lock(wasmMutex_);
     
     static float lastLoggedY = -999.0f;
     if (std::abs(value - lastLoggedY) > 0.01f) {
@@ -514,6 +594,8 @@ void WasmDSP::setBlendY(float value) {
 
 void WasmDSP::setPlaybackSpeed(float speed) {
     if (!initialized_) return;
+
+    std::lock_guard<std::recursive_mutex> lock(wasmMutex_);
     
     static float lastLoggedSpeed = -999.0f;
     if (std::abs(speed - lastLoggedSpeed) > 0.01f) {
@@ -530,6 +612,8 @@ void WasmDSP::setPlaybackSpeed(float speed) {
 
 void WasmDSP::setGrainLength(int length) {
     if (!initialized_) return;
+
+    std::lock_guard<std::recursive_mutex> lock(wasmMutex_);
     
     static int lastLoggedLen = -999;
     if (length != lastLoggedLen) {
@@ -546,6 +630,8 @@ void WasmDSP::setGrainLength(int length) {
 
 void WasmDSP::setGrainDensity(float density) {
     if (!initialized_) return;
+
+    std::lock_guard<std::recursive_mutex> lock(wasmMutex_);
     
     static float lastLoggedDensity = -999.0f;
     if (std::abs(density - lastLoggedDensity) > 0.001f) {
@@ -562,6 +648,8 @@ void WasmDSP::setGrainDensity(float density) {
 
 void WasmDSP::setFreeze(int value) {
     if (!initialized_) return;
+
+    std::lock_guard<std::recursive_mutex> lock(wasmMutex_);
     
     static int lastLoggedFreeze = -999;
     if (value != lastLoggedFreeze) {
@@ -578,6 +666,8 @@ void WasmDSP::setFreeze(int value) {
 
 void WasmDSP::setSpeedTarget(float target) {
     if (!initialized_) return;
+
+    std::lock_guard<std::recursive_mutex> lock(wasmMutex_);
     
     static float lastLoggedTarget = -999.0f;
     if (std::abs(target - lastLoggedTarget) > 0.01f) {
@@ -595,6 +685,8 @@ void WasmDSP::setSpeedTarget(float target) {
 int WasmDSP::getSlotLength(int slot) {
     if (!initialized_) return 0;
 
+    std::lock_guard<std::recursive_mutex> lock(wasmMutex_);
+
     wasm_val_t args[1] = {
         { .kind = WASM_I32, .of = { .i32 = slot } }
     };
@@ -607,6 +699,8 @@ void WasmDSP::shutdown() {
     // Clear flags FIRST to prevent audio thread from accessing resources during destruction
     const bool wasInitialized = initialized_.exchange(false);
     prepared_.store(false);
+
+    std::lock_guard<std::recursive_mutex> lock(wasmMutex_);
 
     if (execEnv_) {
         wasm_runtime_destroy_exec_env(execEnv_);
@@ -650,6 +744,7 @@ void WasmDSP::shutdown() {
     leftInOffset_ = rightInOffset_ = leftOutOffset_ = rightOutOffset_ = 0;
     nativeLeftIn_ = nativeRightIn_ = nativeLeftOut_ = nativeRightOut_ = nullptr;
     nativeSampleData_ = nullptr;
+    memBase_ = nullptr;
     maxBlockSize_ = 0;
     aotDataSize_ = 0;
 }

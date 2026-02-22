@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstdint>
 #include <cstddef>
+#include <mutex>
 
 namespace suna {
 
@@ -71,6 +72,9 @@ private:
     wasm_module_inst_t moduleInst_ = nullptr;
     wasm_exec_env_t execEnv_ = nullptr;
 
+    std::recursive_mutex wasmMutex_;
+    uint8_t* memBase_ = nullptr;
+
     wasm_function_inst_t initSamplerFunc_ = nullptr;
     wasm_function_inst_t loadSampleFunc_ = nullptr;
     wasm_function_inst_t clearSlotFunc_ = nullptr;
@@ -111,6 +115,7 @@ private:
 
     bool lookupFunctions();
     bool allocateBuffers(int maxBlockSize);
+    bool refreshMemoryBase();
 };
 
 } // namespace suna

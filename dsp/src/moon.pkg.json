@@ -24,7 +24,7 @@
       "heap-start-address": 65536,
       "export-memory-name": "memory",
       "memory-limits": {
-        "min": 768,
+        "min": 1024,
         "max": 1024
       }
     }
